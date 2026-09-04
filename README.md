@@ -57,7 +57,7 @@ brewed/
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/Webiverse-Labs/brewed.git
 cd brewed
 ```
 
@@ -104,7 +104,7 @@ npm run dev
 The backend should start on the configured port, for example:
 
 ```text
-http://localhost:5000
+http://localhost:4000
 ```
 
 ---
@@ -255,10 +255,10 @@ More features, API endpoints, authentication, database models, and UI components
 
 ## 👥 Contributors
 
-Add project contributors here.
+Enriquez, Shan - Frontend Developer
+Juanitez, James - Backend Developer
+Pangilinan, Rodge - Project Manager and QA
+Quintela, Wion - Tech Lead and Fullstack Developer
+Seraspe, Ren - Fullstack Developer
 
 ---
-
-## 📄 License
-
-Add your chosen license here.
