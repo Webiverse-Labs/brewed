@@ -1,4 +1,4 @@
-# ☕ Brewed
+# ☕ Brewed 
 
 Brewed is a **MERN stack** web application built with MongoDB, Express.js, React, and Node.js.
 
@@ -38,13 +38,28 @@ The project is structured into separate **frontend** and **backend** application
 brewed/
 ├── backend/
 │   ├── src/
-│   ├── package.json
-│   └── ...
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── lib/
+│   │   ├── middlewares/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   └── server.js
+│   ├── .env
+│   └── package.json
 │
 ├── frontend/
+│   ├── public/
 │   ├── src/
-│   ├── package.json
-│   └── ...
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   ├── pages/
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
+│   ├── index.html
+│   └── package.json
 │
 ├── .gitignore
 └── README.md
@@ -82,7 +97,7 @@ You **do not need to install each dependency individually**. `npm install` reads
 Create a `.env` file inside the `backend` directory:
 
 ```env
-PORT=5000
+PORT=4000
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 ```
@@ -192,7 +207,7 @@ The backend requires a `.env` file.
 Example:
 
 ```env
-PORT=5000
+PORT=4000
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 ```
@@ -202,7 +217,7 @@ Do not share or commit real credentials, secrets, or database connection strings
 For new contributors, consider providing a `.env.example` file:
 
 ```env
-PORT=5000
+PORT=4000
 MONGODB_URI=
 JWT_SECRET=
 ```
