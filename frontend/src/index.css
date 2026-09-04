@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  /*SET DATA-THEME in index.html*/
+  /* Options: all, light, dark, cupcke, bumblebee, emerald, corporate, synthwave, 
+     retro, cyberpuk, valentine, halloween, garden, forest, aqua, lofi, pastel, 
+     fantasy, wireframe, black, luxury, dracula, cmyk, autumn, business, acid, 
+     lemonade, night, coffee, winter, dim, nord, sunset, caramellatte */
+  themes: all;
+}
