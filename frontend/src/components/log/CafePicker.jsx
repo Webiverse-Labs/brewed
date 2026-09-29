@@ -1,0 +1,93 @@
+import { useState } from "react";
+import { Search } from "lucide-react";
+import TextInput from "../ui/TextInput.jsx";
+import CafeImg from "../cafe/CafeImg.jsx";
+import { cafes, getCafe } from "../../data/mock.js";
+
+// Search-as-you-type café picker. `value` is a café id or null.
+function CafePicker({ value, onChange }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = value && getCafe(value);
+
+  if (selected) {
+    return (
+      <div className="flex items-center gap-3 rounded-field border border-base-300 bg-surface p-2 pr-4">
+        <div className="size-10 shrink-0 overflow-hidden rounded-lg">
+          <CafeImg cafe={selected} compact />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display font-semibold">{selected.name}</p>
+          <p className="truncate text-[13px] text-secondary">{selected.area}</p>
+        </div>
+        <button type="button" onClick={() => onChange(null)} className="text-sm font-medium text-accent hover:underline">
+          Change
+        </button>
+      </div>
+    );
+  }
+
+  // TODO(api): GET /api/cafes?q=
+  const q = query.trim().toLowerCase();
+  const results = cafes
+    .filter((c) => c.active && (c.name.toLowerCase().includes(q) || c.area.toLowerCase().includes(q)))
+    .slice(0, 6);
+
+  const pick = (id) => {
+    onChange(id);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <TextInput
+        look="outlined"
+        icon={Search}
+        placeholder="Search for a café…"
+        aria-label="Search for a café"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls="cafe-picker-results"
+        autoComplete="off"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+      />
+      {open && (
+        <ul
+          id="cafe-picker-results"
+          role="listbox"
+          className="absolute inset-x-0 top-full z-10 mt-2 max-h-72 overflow-y-auto rounded-box border border-base-300 bg-surface p-1.5 shadow-float"
+        >
+          {results.length === 0 && <li className="px-3 py-4 text-sm text-secondary">No cafés match “{query}”.</li>}
+          {results.map((cafe) => (
+            <li key={cafe.id} role="option" aria-selected="false">
+              <button
+                type="button"
+                // Keep focus in the input so onBlur doesn't close the list before the click lands.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(cafe.id)}
+                className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-base-200"
+              >
+                <span className="size-10 shrink-0 overflow-hidden rounded-lg">
+                  <CafeImg cafe={cafe} compact />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-display font-semibold">{cafe.name}</span>
+                  <span className="block truncate text-[13px] text-secondary">{cafe.area}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export default CafePicker;

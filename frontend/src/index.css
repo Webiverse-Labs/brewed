@@ -1,9 +1,66 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  /*SET DATA-THEME in index.html*/
-  /* Options: all, light, dark, cupcke, bumblebee, emerald, corporate, synthwave, 
-     retro, cyberpuk, valentine, halloween, garden, forest, aqua, lofi, pastel, 
-     fantasy, wireframe, black, luxury, dracula, cmyk, autumn, business, acid, 
-     lemonade, night, coffee, winter, dim, nord, sunset, caramellatte */
-  themes: all;
+  themes: false;
+}
+
+/* Brewed theme — values documented in docs/ui/tokens.md (sampled from the Figma screens) */
+@plugin "daisyui/theme" {
+  name: "brewed";
+  default: true;
+  color-scheme: light;
+
+  --color-base-100: #fbf9f5;
+  --color-base-200: #f3ede4;
+  --color-base-300: #e8e2d9;
+  --color-base-content: #2b1e1a;
+
+  --color-primary: #2b1e1a;
+  --color-primary-content: #ffffff;
+  --color-secondary: #7a8b7b;
+  --color-secondary-content: #ffffff;
+  --color-accent: #c86d51;
+  --color-accent-content: #ffffff;
+  --color-neutral: #4b3f3b;
+  --color-neutral-content: #ffffff;
+
+  /* status colours aren't in the exported screens yet — placeholders */
+  --color-info: #7a8b7b;
+  --color-info-content: #ffffff;
+  --color-success: #5f8a64;
+  --color-success-content: #ffffff;
+  --color-warning: #b7791f;
+  --color-warning-content: #ffffff;
+  --color-error: #b84a3a;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 9999px;
+  --radius-field: 0.875rem;
+  --radius-box: 1rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* Extra tokens DaisyUI has no slot for: bg-surface, bg-accent-soft, text-muted, font-display, … */
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+
+  --color-surface: #ffffff;
+  --color-primary-soft: #4b3f3b;
+  --color-accent-soft: #f6ece6;
+  --color-unread: #f8f2ed;
+  --color-muted: #a89f98;
+  --color-neutral-100: #edebe6;
+
+  --shadow-soft: 0 8px 24px rgb(43 30 26 / 0.08);
+  --shadow-float: 0 20px 48px rgb(43 30 26 / 0.14);
+}
+
+/* Horizontal card rows scroll without a visible scrollbar */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
