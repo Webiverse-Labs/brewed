@@ -1,7 +1,9 @@
 import { useOutletContext } from "react-router-dom";
 import Page from "../../components/layout/Page.jsx";
 import CafeRow from "../../components/cafe/CafeRow.jsx";
-import { cafes, currentUser } from "../../data/mock.js";
+import LoadError from "../../components/ui/LoadError.jsx";
+import Loader from "../../components/ui/Loader.jsx";
+import { useApi } from "../../hooks/useApi.js";
 
 const greeting = () => {
   const hour = new Date().getHours();
@@ -10,17 +12,25 @@ const greeting = () => {
   return "Good evening";
 };
 
+const rows = [
+  { title: "Popular Cafés", path: "/cafes?sort=popular&limit=12" },
+  { title: "Featured Cafés", path: "/cafes?featured=true&limit=12" },
+  { title: "Top Rated", path: "/cafes?sort=rating&limit=12" },
+  { title: "Recently Added", path: "/cafes?sort=new&limit=12" },
+];
+
+// one request per row, so each section loads (or fails) on its own
+function HomeRow({ title, path, onSeeAll }) {
+  const { data, loading, error, reload } = useApi(path);
+
+  if (loading && !data) return <Loader />;
+  if (error) return <LoadError message={error} onRetry={reload} />;
+  if (!data.cafes.length) return null;
+  return <CafeRow title={title} cafes={data.cafes} onSeeAll={onSeeAll} />;
+}
+
 function HomePage() {
   const { openExplore } = useOutletContext();
-
-  // TODO(api): GET /api/cafes?sort=popular | ?featured=true | ?sort=rating | ?sort=new
-  const active = cafes.filter((c) => c.active);
-  const rows = [
-    { title: "Popular Cafés", cafes: active },
-    { title: "Featured Cafés", cafes: active.filter((c) => c.featured) },
-    { title: "Top Rated", cafes: [...active].sort((a, b) => b.rating - a.rating) },
-    { title: "Recently Added", cafes: [...active].reverse() },
-  ];
 
   return (
     <Page className="overflow-x-clip">
@@ -30,7 +40,7 @@ function HomePage() {
       </h1>
       <div className="mt-10 flex flex-col gap-10">
         {rows.map((row) => (
-          <CafeRow key={row.title} title={row.title} cafes={row.cafes} savedIds={currentUser.favorites} onSeeAll={openExplore} />
+          <HomeRow key={row.title} {...row} onSeeAll={openExplore} />
         ))}
       </div>
     </Page>

@@ -3,6 +3,8 @@ import RootLayout from "./components/layout/RootLayout.jsx";
 import AuthLayout from "./components/layout/AuthLayout.jsx";
 import UserLayout from "./components/layout/UserLayout.jsx";
 import AdminLayout from "./components/layout/AdminLayout.jsx";
+import GuestOnly from "./components/layout/GuestOnly.jsx";
+import RequireAuth from "./components/layout/RequireAuth.jsx";
 import AuthPage from "./pages/auth/AuthPage.jsx";
 import HomePage from "./pages/user/HomePage.jsx";
 import CafeProfilePage from "./pages/user/CafeProfilePage.jsx";
@@ -24,13 +26,18 @@ const devRoutes = import.meta.env.DEV
   ? [{ path: "/dev/ui", lazy: async () => ({ Component: (await import("./pages/dev/UiKitPage.jsx")).default }) }]
   : [];
 
-// Route table mirrors docs/ui/screens.md. No auth guards yet — that comes with the backend.
+// Route table mirrors docs/ui/screens.md. The app requires an account: RequireAuth sends
+// logged-out visitors to /login (or /admin/login), GuestOnly keeps logged-in users off the auth pages.
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
       {
-        element: <AuthLayout />,
+        element: (
+          <GuestOnly>
+            <AuthLayout />
+          </GuestOnly>
+        ),
         children: [
           { path: "/signup", element: <AuthPage /> },
           { path: "/login", element: <AuthPage /> },
@@ -38,7 +45,11 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        element: <UserLayout />,
+        element: (
+          <RequireAuth>
+            <UserLayout />
+          </RequireAuth>
+        ),
         children: [
           { path: "/", element: <HomePage /> },
           { path: "/cafes/:id", element: <CafeProfilePage /> },
@@ -52,7 +63,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "/admin",
-        element: <AdminLayout />,
+        element: (
+          <RequireAuth admin>
+            <AdminLayout />
+          </RequireAuth>
+        ),
         children: [
           { index: true, element: <AdminDashboardPage /> },
           { path: "cafes", element: <AdminCafesPage /> },

@@ -1,9 +1,10 @@
 import { Outlet, ScrollRestoration } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import AuthProvider from "../../context/AuthProvider.jsx";
 
 function RootLayout() {
   return (
-    <>
+    <AuthProvider>
       <ScrollRestoration />
       <Outlet />
       <Toaster
@@ -19,7 +20,7 @@ function RootLayout() {
           success: { iconTheme: { primary: "var(--color-accent)", secondary: "white" } },
         }}
       />
-    </>
+    </AuthProvider>
   );
 }
 

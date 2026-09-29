@@ -12,55 +12,71 @@ import Field from "../../components/ui/Field.jsx";
 import Modal from "../../components/ui/Modal.jsx";
 import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
-import { matches } from "../../lib/search.js";
-import { cafes } from "../../data/mock.js";
+import LoadError from "../../components/ui/LoadError.jsx";
+import Loader from "../../components/ui/Loader.jsx";
+import api, { errorMessage } from "../../lib/api.js";
+import { useApi } from "../../hooks/useApi.js";
+import { useDebounced } from "../../hooks/useDebounced.js";
 
 const columns = ["Café", "Location", "Rating", "Visits", "Actions"];
 
 function AdminCafesPage() {
-  // TODO(api): GET /api/cafes?q=, POST /api/cafes, PATCH /api/cafes/:id
-  const [rows, setRows] = useState(cafes);
   const [query, setQuery] = useState("");
+  const q = encodeURIComponent(useDebounced(query.trim()));
+  const { data, loading, error, reload, setData } = useApi(`/admin/cafes?q=${q}`);
   const [editing, setEditing] = useState(null); // null | "new" | café being edited
+  const [photos, setPhotos] = useState([]);
+  const [saving, setSaving] = useState(false);
 
-  const shown = rows.filter((c) => matches(query, c.name, c.area));
+  const rows = data?.cafes ?? [];
   const isNew = editing === "new";
 
-  const toggleActive = (cafe) => {
-    setRows((all) => all.map((c) => (c.id === cafe.id ? { ...c, active: !c.active } : c)));
-    toast.success(`${cafe.name} ${cafe.active ? "disabled" : "enabled"}.`);
+  const replaceRow = (cafe) => setData((d) => ({ ...d, cafes: d.cafes.map((c) => (c.id === cafe.id ? cafe : c)) }));
+
+  const openEditor = (target) => {
+    setPhotos([]);
+    setEditing(target);
   };
 
-  const save = (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.currentTarget));
-    const fields = {
-      name: data.name,
-      address: data.address,
-      hours: data.hours,
-      description: data.description,
-      tags: data.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-    };
-    if (isNew) {
-      const area = data.address.split(",").slice(-2).join(",").trim();
-      setRows((all) => [
-        { id: `new-${Date.now()}`, ...fields, area, rating: 0, visits: 0, active: true, photo: null },
-        ...all,
-      ]);
-      toast.success(`${data.name} added.`);
-    } else {
-      setRows((all) => all.map((c) => (c.id === editing.id ? { ...c, ...fields } : c)));
-      toast.success("Changes saved.");
+  const toggleActive = async (cafe) => {
+    try {
+      const { data: res } = await api.patch(`/admin/cafes/${cafe.id}`, { active: !cafe.active });
+      replaceRow(res.cafe);
+      toast.success(`${cafe.name} ${res.cafe.active ? "enabled" : "disabled"}.`);
+    } catch (err) {
+      toast.error(errorMessage(err));
     }
-    setEditing(null);
+  };
+
+  const save = async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    //unchecked checkboxes are left out of FormData, so send the flag explicitly
+    form.set("featured", String(form.has("featured")));
+    photos.forEach((photo) => form.append("photos", photo));
+
+    setSaving(true);
+    try {
+      if (isNew) {
+        await api.post("/admin/cafes", form);
+        toast.success(`${form.get("name")} added.`);
+        reload();
+      } else {
+        const { data: res } = await api.patch(`/admin/cafes/${editing.id}`, form);
+        replaceRow(res.cafe);
+        toast.success("Changes saved.");
+      }
+      setEditing(null);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const actions = (cafe) => (
     <div className="flex gap-1.5">
-      <Button variant="ghost" size="sm" onClick={() => setEditing(cafe)}>
+      <Button variant="ghost" size="sm" onClick={() => openEditor(cafe)}>
         <Pencil size={14} /> Edit
       </Button>
       <Button variant={cafe.active ? "dangerSoft" : "outline"} size="sm" onClick={() => toggleActive(cafe)}>
@@ -99,15 +115,20 @@ function AdminCafesPage() {
           onChange={(e) => setQuery(e.target.value)}
           className="sm:w-64"
         />
-        <Button onClick={() => setEditing("new")}>
+        <Button onClick={() => openEditor("new")}>
           <Plus size={16} /> Add New Café
         </Button>
       </AdminHeader>
 
+      {loading && !data ? (
+        <Loader />
+      ) : error ? (
+        <LoadError message={error} onRetry={reload} />
+      ) : (
       <DataTable
         columns={columns}
-        rows={shown}
-        emptyText="No cafés match your search."
+        rows={rows}
+        emptyText={query.trim() ? "No cafés match your search." : "No cafés yet."}
         renderRow={(cafe) => (
           <>
             <td className={cafe.active ? "" : "opacity-60"}>{nameCell(cafe, "size-10")}</td>
@@ -129,6 +150,7 @@ function AdminCafesPage() {
           </>
         )}
       />
+      )}
 
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={isNew ? "Add New Café" : "Edit Café"} size="lg">
         <form onSubmit={save} className="flex flex-col gap-4">
@@ -136,14 +158,23 @@ function AdminCafesPage() {
           <Field label="Tags" hint="Separate tags with commas">
             <TextInput name="tags" placeholder="Specialty, Micro-roastery…" defaultValue={isNew ? "" : editing?.tags.join(", ")} />
           </Field>
-          <Field as="div" label="Photos">
-            <DashedUpload icon={ImagePlus} label="Click to upload photos" multiple name="photos" />
+          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-box border border-base-300 bg-surface p-4">
+            <span>
+              <span className="block text-[15px] font-medium">Featured on Home</span>
+              <span className="block text-[13px] text-secondary">Shows in the "Featured Cafés" row</span>
+            </span>
+            <input type="checkbox" name="featured" className="toggle toggle-primary" defaultChecked={!isNew && editing?.featured} />
+          </label>
+          <Field as="div" label="Photos" hint={isNew ? undefined : "New photos are added after the existing ones."}>
+            <DashedUpload icon={ImagePlus} label="Click to upload photos" multiple onChange={setPhotos} />
           </Field>
           <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button variant="ghost" onClick={() => setEditing(null)}>
               Cancel
             </Button>
-            <Button type="submit">{isNew ? "Add Café" : "Save Changes"}</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : isNew ? "Add Café" : "Save Changes"}
+            </Button>
           </div>
         </form>
       </Modal>

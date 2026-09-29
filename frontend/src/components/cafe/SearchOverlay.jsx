@@ -4,8 +4,10 @@ import CompactCafeRow from "./CompactCafeRow.jsx";
 import SearchUserRow from "./SearchUserRow.jsx";
 import BookmarkBtn from "../ui/BookmarkBtn.jsx";
 import FilterTabs from "../ui/FilterTabs.jsx";
-import { matches } from "../../lib/search.js";
-import { cafes, users, currentUser, following } from "../../data/mock.js";
+import LoadError from "../ui/LoadError.jsx";
+import Loader from "../ui/Loader.jsx";
+import { useApi } from "../../hooks/useApi.js";
+import { useDebounced } from "../../hooks/useDebounced.js";
 
 const tabs = [
   { value: "cafes", label: "Cafés" },
@@ -33,10 +35,13 @@ function SearchPanel({ onClose, onSuggest }) {
     };
   }, [onClose]);
 
-  // TODO(api): GET /api/cafes?q= and GET /api/users?q=
-  const cafeResults = cafes.filter((c) => c.active && matches(query, c.name, c.area, ...c.tags));
-  const userResults = users.filter((u) => u.id !== currentUser.id && matches(query, u.name, u.username));
-  const empty = tab === "cafes" ? cafeResults.length === 0 : userResults.length === 0;
+  // only the visible tab fetches; typing waits 250 ms before searching
+  const q = encodeURIComponent(useDebounced(query.trim()));
+  const cafeSearch = useApi(tab === "cafes" ? `/cafes?q=${q}&limit=20` : null);
+  const userSearch = useApi(tab === "people" ? `/users?q=${q}` : null);
+  const search = tab === "cafes" ? cafeSearch : userSearch;
+  const results = (tab === "cafes" ? search.data?.cafes : search.data?.users) ?? [];
+  const empty = !search.loading && !search.error && results.length === 0;
 
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Explore">
@@ -66,25 +71,27 @@ function SearchPanel({ onClose, onSuggest }) {
         <FilterTabs tabs={tabs} value={tab} onChange={setTab} size="sm" label="Search in" className="shrink-0 px-5 pt-4 md:px-6" />
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 md:px-4">
+          {search.loading && results.length === 0 && <Loader />}
+          {search.error && <LoadError message={search.error} onRetry={search.reload} />}
           {empty && (
             <p className="px-3 py-10 text-center text-sm text-secondary">
-              No {tab === "cafes" ? "cafés" : "coffee drinkers"} match “{query}”.
+              {query.trim()
+                ? `No ${tab === "cafes" ? "cafés" : "coffee drinkers"} match “${query.trim()}”.`
+                : `No ${tab === "cafes" ? "cafés" : "coffee drinkers"} yet.`}
             </p>
           )}
           {tab === "cafes" &&
-            cafeResults.map((cafe) => (
+            results.map((cafe) => (
               <CompactCafeRow
                 key={cafe.id}
                 cafe={cafe}
                 bordered={false}
                 onNavigate={onClose}
-                right={<BookmarkBtn defaultActive={currentUser.favorites.includes(cafe.id)} />}
+                right={<BookmarkBtn cafeId={cafe.id} />}
               />
             ))}
           {tab === "people" &&
-            userResults.map((user) => (
-              <SearchUserRow key={user.id} user={user} following={following.includes(user.id)} onNavigate={onClose} />
-            ))}
+            results.map((user) => <SearchUserRow key={user.id} user={user} onNavigate={onClose} />)}
         </div>
 
         <div className="shrink-0 border-t border-base-300 px-6 py-4 text-center text-sm">

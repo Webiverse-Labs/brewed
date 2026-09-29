@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import SegmentedControl from "../../components/ui/SegmentedControl.jsx";
@@ -5,6 +6,8 @@ import Field from "../../components/ui/Field.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
 import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
+import { errorMessage } from "../../lib/api.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 const modes = [
   { value: "signup", label: "Sign Up" },
@@ -13,15 +16,25 @@ const modes = [
 
 // Serves both /signup and /login; the mode comes from the path.
 function AuthPage() {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   const navigate = useNavigate();
-  const signup = pathname === "/signup";
+  const { login, signup } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const isSignup = pathname === "/signup";
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO(api): POST /api/auth/signup | /api/auth/login
-    toast.success(signup ? "Welcome to Brewed!" : "Welcome back!");
-    navigate("/");
+    const { name, email, password } = Object.fromEntries(new FormData(e.currentTarget));
+    setSubmitting(true);
+    try {
+      const user = isSignup ? await signup({ name, email, password }) : await login(email, password);
+      toast.success(isSignup ? "Welcome to Brewed!" : `Welcome back, ${user.name.split(" ")[0]}!`);
+      //back to the page that sent them to log in, if any
+      navigate(state?.from?.pathname ?? "/", { replace: true });
+    } catch (err) {
+      toast.error(errorMessage(err));
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -29,12 +42,12 @@ function AuthPage() {
       <SegmentedControl
         label="Sign up or log in"
         options={modes}
-        value={signup ? "signup" : "login"}
-        onChange={(mode) => navigate(`/${mode}`, { replace: true })}
+        value={isSignup ? "signup" : "login"}
+        onChange={(mode) => navigate(`/${mode}`, { replace: true, state })}
         className="mb-6"
       />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {signup && (
+        {isSignup && (
           <Field label="Full Name">
             <TextInput name="name" required placeholder="Ada Lovelace" autoComplete="name" />
           </Field>
@@ -44,22 +57,23 @@ function AuthPage() {
             type="email"
             name="email"
             required
-            placeholder={signup ? "ada@example.com" : "you@example.com"}
+            placeholder={isSignup ? "ada@example.com" : "you@example.com"}
             autoComplete="email"
           />
         </Field>
-        <Field label="Password">
+        <Field label="Password" hint={isSignup ? "At least 8 characters" : undefined}>
           <PasswordInput
             name="password"
             required
-            placeholder={signup ? "Create a password" : "Your password"}
-            autoComplete={signup ? "new-password" : "current-password"}
+            minLength={isSignup ? 8 : undefined}
+            placeholder={isSignup ? "Create a password" : "Your password"}
+            autoComplete={isSignup ? "new-password" : "current-password"}
           />
         </Field>
-        <Button type="submit" block className="mt-1">
-          {signup ? "Create Account" : "Log In"}
+        <Button type="submit" block className="mt-1" disabled={submitting}>
+          {submitting ? "Please wait…" : isSignup ? "Create Account" : "Log In"}
         </Button>
-        {!signup && (
+        {!isSignup && (
           <p className="text-center text-sm text-secondary">
             Forgot your password?{" "}
             <button

@@ -24,7 +24,7 @@ import CafeCard from "../../components/cafe/CafeCard.jsx";
 import CompactCafeRow from "../../components/cafe/CompactCafeRow.jsx";
 import ReviewCard from "../../components/cafe/ReviewCard.jsx";
 import StatCard from "../../components/admin/StatCard.jsx";
-import { adminStats, cafes, logs } from "../../data/mock.js";
+import { cafes, logs, stats } from "./fixtures.js";
 
 function Block({ title, children }) {
   return (
@@ -48,7 +48,10 @@ function UiKitPage() {
       <h1 className="mt-4 font-display text-4xl font-medium">
         UI kit <em>preview</em>
       </h1>
-      <p className="mt-2 text-secondary">Dev-only page. Compare against docs/ui/tokens.md and the Figma screenshots.</p>
+      <p className="mt-2 text-secondary">
+        Dev-only page. Compare against docs/ui/tokens.md and the Figma screenshots. Buttons that call the API
+        (bookmark, follow) only work for real ids while logged in.
+      </p>
 
       <Block title="Colors">
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
@@ -88,8 +91,8 @@ function UiKitPage() {
           </Button>
           <Button disabled>Disabled</Button>
           <Button shape="pill">Pill</Button>
-          <FollowButton />
-          <FollowButton defaultFollowing />
+          <FollowButton userId="fixture-user" />
+          <FollowButton userId="fixture-user" defaultFollowing />
         </div>
       </Block>
 
@@ -158,10 +161,9 @@ function UiKitPage() {
           <Avatar name="Sofia Reinholt" tone="primary" />
           <Avatar name="Tomás Vega" tone="neutral" size="ml" />
           <Avatar initials="??" tone="neutral" size="lg" />
-          <BookmarkBtn />
-          <BookmarkBtn defaultActive />
+          <BookmarkBtn cafeId={cafes[0].id} />
           <div className="rounded-box bg-primary p-3">
-            <BookmarkBtn onDark size="lg" />
+            <BookmarkBtn cafeId={cafes[1].id} onDark size="lg" />
           </div>
         </div>
       </Block>
@@ -169,17 +171,18 @@ function UiKitPage() {
       <Block title="Cards">
         <div className="flex flex-wrap gap-4">
           <CafeCard cafe={cafes[0]} />
-          <CafeCard cafe={cafes[1]} saved />
+          <CafeCard cafe={cafes[1]} />
           <div className="h-40 w-60 overflow-hidden rounded-box">
             <ImagePlaceholder />
           </div>
         </div>
         <CompactCafeRow cafe={cafes[2]} />
-        <CompactCafeRow cafe={cafes[4]} detail="address" />
+        <CompactCafeRow cafe={cafes[1]} detail="address" />
         <ReviewCard log={logs[0]} />
-        <ReviewCard log={logs[2]} />
+        <ReviewCard log={logs[1]} />
+        <ReviewCard log={logs[0]} heading="cafe" />
         <div className="grid gap-4 sm:grid-cols-3">
-          {adminStats.map((s) => (
+          {stats.map((s) => (
             <StatCard key={s.label} {...s} />
           ))}
         </div>

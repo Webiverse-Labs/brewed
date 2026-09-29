@@ -1,17 +1,26 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LogOut, Settings, UserRound } from "lucide-react";
 import Avatar from "../ui/Avatar.jsx";
 import { navBtnClass } from "./navStyles.js";
-import { currentUser } from "../../data/mock.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 // DaisyUI focus-based dropdown; blurring after a click closes it.
 const closeMenu = () => document.activeElement?.blur();
 
 function ProfileMenu({ active }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    closeMenu();
+    await logout();
+    navigate("/login");
+  };
+
   return (
     <div className="dropdown dropdown-end">
       <div tabIndex={0} role="button" aria-haspopup="menu" className={navBtnClass(active)}>
-        <Avatar name={currentUser.name} tone={currentUser.tone} size="2xs" />
+        <Avatar name={user.name} src={user.avatarUrl} size="2xs" />
         Profile
       </div>
       <ul
@@ -30,9 +39,9 @@ function ProfileMenu({ active }) {
           </Link>
         </li>
         <li>
-          <Link to="/login" onClick={closeMenu} className="text-error">
+          <button type="button" onClick={handleLogout} className="text-error">
             <LogOut size={16} /> Log Out
-          </Link>
+          </button>
         </li>
       </ul>
     </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { Camera, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import Page from "../../components/layout/Page.jsx";
@@ -14,25 +14,49 @@ import TextArea from "../../components/ui/TextArea.jsx";
 import BeanRating from "../../components/ui/BeanRating.jsx";
 import DashedUpload from "../../components/ui/DashedUpload.jsx";
 import Button from "../../components/ui/Button.jsx";
+import api, { errorMessage } from "../../lib/api.js";
 
 // Local YYYY-MM-DD ("en-CA" formats that way); toISOString() would give the UTC date.
 const today = () => new Date().toLocaleDateString("en-CA");
 
 function LogVisitPage() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { openSuggest } = useOutletContext();
   const [type, setType] = useState("review");
-  const [cafeId, setCafeId] = useState(null);
+  //opened from a café page's "log a visit" button -> that café is pre-selected
+  const [cafe, setCafe] = useState(state?.cafe ?? null);
   const [rating, setRating] = useState(0);
   const [items, setItems] = useState([]);
   const [anonymous, setAnonymous] = useState(false);
+  const [photos, setPhotos] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!cafeId) return toast.error("Choose the café you visited.");
+    if (!cafe) return toast.error("Choose the café you visited.");
     if (!rating) return toast.error("Give your visit an overall rating.");
-    // TODO(api): POST /api/logs (multipart) with { type, cafeId, rating, items, anonymous, ...form fields }
-    navigate("/log/success", { state: { type } });
+
+    //multipart, because diary entries can carry photos; `items` travels as a JSON string
+    const fields = new FormData(e.currentTarget);
+    const form = new FormData();
+    form.set("type", type);
+    form.set("cafeId", cafe.id);
+    form.set("visitedAt", fields.get("date"));
+    form.set("rating", String(rating));
+    form.set("text", fields.get("text") ?? "");
+    form.set("items", JSON.stringify(items.map(({ name, category, rating: itemRating, note }) => ({ name, category, rating: itemRating, note }))));
+    if (type === "review") form.set("anonymous", String(anonymous));
+    else photos.forEach((photo) => form.append("photos", photo));
+
+    setSubmitting(true);
+    try {
+      await api.post("/logs", form);
+      navigate("/log/success", { state: { type } });
+    } catch (err) {
+      toast.error(errorMessage(err));
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -45,7 +69,7 @@ function LogVisitPage() {
         </FormSection>
 
         <FormSection title="Where did you visit?">
-          <CafePicker value={cafeId} onChange={setCafeId} />
+          <CafePicker value={cafe} onChange={setCafe} />
           <button
             type="button"
             onClick={openSuggest}
@@ -88,12 +112,12 @@ function LogVisitPage() {
               />
             </label>
           ) : (
-            <DashedUpload icon={Camera} label="Click to upload photos" multiple name="photos" />
+            <DashedUpload icon={Camera} label="Click to upload photos" multiple onChange={setPhotos} />
           )}
         </FormSection>
 
-        <Button type="submit" block>
-          Submit Log
+        <Button type="submit" block disabled={submitting}>
+          {submitting ? "Saving…" : "Submit Log"}
         </Button>
       </form>
     </Page>

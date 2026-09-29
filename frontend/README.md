@@ -1,16 +1,41 @@
-# React + Vite
+# Brewed frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite + Tailwind CSS 4 + DaisyUI 5. The UI spec (screens, components, design tokens) is in [`docs/ui/`](../docs/ui/README.md).
 
-Currently, two official plugins are available:
+## Run it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The backend must be running too (see [`backend/README.md`](../backend/README.md)).
 
-## React Compiler
+```bash
+cd frontend
+npm install
+npm run dev      # http://localhost:5173
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The app talks to `http://localhost:4000` by default. To use a different API address, create `frontend/.env.local`
+(git-ignored):
 
-## Expanding the Oxlint configuration
+```env
+VITE_API_URL=http://localhost:4000
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+If you change the frontend port, also set `CLIENT_URL` in `backend/.env`, or the browser will block the requests (CORS).
+
+Other scripts: `npm run lint` (oxlint), `npm run build`, `npm run preview`.
+
+## How it's organized
+
+| Folder | Contents |
+|---|---|
+| `src/router.jsx` | Every route. `RequireAuth` protects the app and admin areas; `GuestOnly` keeps logged-in users off the auth pages |
+| `src/pages/` | One file per screen (`auth/`, `user/`, `admin/`). `dev/UiKitPage.jsx` is at `/dev/ui` in dev only |
+| `src/components/ui/` | Shared building blocks: Button, Field, BeanRating, Modal, Avatar… |
+| `src/components/layout/` | Page shells: auth layout, user app (navbar + mobile tab bar), admin (sidebar/drawer) |
+| `src/components/{cafe,log,user,admin}/` | Pieces for specific screens, named after the Figma layers |
+| `src/context/AuthProvider.jsx` + `hooks/useAuth.js` | The logged-in user (`favorites` and `unreadNotifications` included) and `login` / `signup` / `logout` |
+| `src/hooks/useApi.js` | `const { data, loading, error, reload, setData } = useApi("/cafes")` for GET requests |
+| `src/lib/api.js` | Axios instance (sends the auth cookie) and `errorMessage(err)` for toasts |
+| `src/lib/assetUrl.js`, `format.js` | Uploaded-image URLs and date formatting |
+
+Conventions: use the theme classes from `index.css` (`bg-base-100`, `text-accent`, `font-display`…), not hex colors.
+Components take `variant` / `size` props instead of relying on class overrides (there's no tailwind-merge).

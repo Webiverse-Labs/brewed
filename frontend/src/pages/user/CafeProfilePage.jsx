@@ -8,19 +8,25 @@ import InfoCard from "../../components/cafe/InfoCard.jsx";
 import InfoRow from "../../components/cafe/InfoRow.jsx";
 import RatingBreakdown from "../../components/cafe/RatingBreakdown.jsx";
 import ReviewCard from "../../components/cafe/ReviewCard.jsx";
+import LoadError from "../../components/ui/LoadError.jsx";
+import Loader from "../../components/ui/Loader.jsx";
 import NotFoundPage from "../NotFoundPage.jsx";
-import { currentUser, getCafe, logs } from "../../data/mock.js";
+import { assetUrl } from "../../lib/assetUrl.js";
+import { useApi } from "../../hooks/useApi.js";
 
 function CafeProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const cafe = getCafe(id);
+  const cafeRequest = useApi(`/cafes/${id}`);
+  const logsRequest = useApi(`/cafes/${id}/logs`);
+  const cafe = cafeRequest.data?.cafe;
 
-  if (!cafe) return <NotFoundPage />;
+  if (cafeRequest.status === 404) return <NotFoundPage />;
+  if (cafeRequest.error) return <LoadError message={cafeRequest.error} onRetry={cafeRequest.reload} />;
+  if (!cafe) return <Loader fullScreen />;
 
-  // TODO(api): GET /api/cafes/:id and /api/cafes/:id/logs (public reviews only)
-  const reviews = logs.filter((l) => l.cafeId === cafe.id && l.type === "review");
+  const reviews = logsRequest.data?.logs ?? [];
   // "default" means the page was opened directly, so there is no in-app history to go back to.
   const goBack = () => (location.key === "default" ? navigate("/") : navigate(-1));
 
@@ -28,7 +34,7 @@ function CafeProfilePage() {
     <>
       <section className="relative h-[320px] overflow-hidden bg-primary md:h-[384px]">
         {cafe.photo ? (
-          <img src={cafe.photo} alt="" className="absolute inset-0 size-full object-cover" />
+          <img src={assetUrl(cafe.photo)} alt="" className="absolute inset-0 size-full object-cover" />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-white/10">
             <CoffeeBean size={180} filled={false} />
@@ -53,19 +59,19 @@ function CafeProfilePage() {
             </p>
             <BeanRating value={cafe.rating} size={16} className="mt-3" />
           </div>
-          <BookmarkBtn onDark size="lg" defaultActive={currentUser.favorites.includes(cafe.id)} />
+          <BookmarkBtn cafeId={cafe.id} onDark size="lg" />
         </div>
       </section>
 
       <div className="mx-auto grid max-w-[1024px] gap-8 px-5 py-8 md:grid-cols-[292px_1fr] md:px-10">
         <aside className="flex flex-col gap-4">
           <InfoCard title="About">
-            <p className="text-[15px] leading-relaxed">{cafe.description}</p>
+            <p className="text-[15px] leading-relaxed">{cafe.description || "No description yet."}</p>
           </InfoCard>
           <InfoCard title="Details">
             <div className="flex flex-col gap-3">
               <InfoRow icon={MapPin}>{cafe.address}</InfoRow>
-              <InfoRow icon={Clock}>{cafe.hours}</InfoRow>
+              {cafe.hours && <InfoRow icon={Clock}>{cafe.hours}</InfoRow>}
             </div>
           </InfoCard>
           <InfoCard title="Community Ratings">
@@ -75,7 +81,11 @@ function CafeProfilePage() {
 
         <section>
           <h2 className="mb-4 font-display text-2xl font-medium">Diary Entries & Reviews</h2>
-          {reviews.length > 0 ? (
+          {logsRequest.loading && !logsRequest.data ? (
+            <Loader />
+          ) : logsRequest.error ? (
+            <LoadError message={logsRequest.error} onRetry={logsRequest.reload} />
+          ) : reviews.length > 0 ? (
             <div className="flex flex-col gap-4">
               {reviews.map((log) => (
                 <ReviewCard key={log.id} log={log} />
@@ -84,7 +94,8 @@ function CafeProfilePage() {
           ) : (
             <div className="rounded-box border border-dashed border-base-300 px-6 py-12 text-center">
               <p className="text-[15px] text-secondary">No public reviews yet.</p>
-              <Button to="/log" shape="pill" size="sm" className="mt-4">
+              {/* the Log a Visit form starts with this café already chosen */}
+              <Button to="/log" state={{ cafe }} shape="pill" size="sm" className="mt-4">
                 Be the first to log a visit
               </Button>
             </div>

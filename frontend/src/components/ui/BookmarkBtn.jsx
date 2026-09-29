@@ -1,17 +1,37 @@
 import { useState } from "react";
 import { Bookmark } from "lucide-react";
+import toast from "react-hot-toast";
+import api, { errorMessage } from "../../lib/api.js";
 import { cn } from "../../lib/cn.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
-// UI-only phase: the saved state is local to each button.
+// Save / unsave a café. The saved state lives in the logged-in user's `favorites`, so every
+// BookmarkBtn for the same café (cards, café page, search) stays in sync.
 // `onDark` is the frosted version used on the café hero photo.
-function BookmarkBtn({ defaultActive = false, onDark, size = "md", className }) {
-  const [active, setActive] = useState(defaultActive);
+function BookmarkBtn({ cafeId, onDark, size = "md", className }) {
+  const { user, updateUser } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const active = Boolean(user?.favorites?.includes(cafeId));
 
-  const toggle = (e) => {
+  const toggle = async (e) => {
     // Cards wrap this button in a <Link>; don't navigate when saving.
     e.preventDefault();
     e.stopPropagation();
-    setActive((a) => !a);
+    if (!user || busy) return;
+
+    const previous = user.favorites;
+    //optimistic: flip it now, then trust the server's list
+    updateUser({ favorites: active ? previous.filter((id) => id !== cafeId) : [...previous, cafeId] });
+    setBusy(true);
+    try {
+      const { data } = active ? await api.delete(`/cafes/${cafeId}/favorite`) : await api.post(`/cafes/${cafeId}/favorite`);
+      updateUser({ favorites: data.favorites });
+    } catch (err) {
+      updateUser({ favorites: previous });
+      toast.error(errorMessage(err, "Couldn't update your favorites."));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

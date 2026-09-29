@@ -9,7 +9,7 @@ function AuthLayout() {
   return (
     <div className="mx-auto grid min-h-screen max-w-[1024px] content-center items-center gap-10 px-5 py-10 md:grid-cols-[1fr_340px] md:gap-16 md:px-12">
       <div className="text-center md:text-left">
-        <h1 className="mx-auto max-w-[440px] font-display text-[40px] leading-[1.1] font-medium md:mx-0 md:text-[64px]">
+        <h1 className="mx-auto max-w-[440px] font-display text-[40px] leading-[1.1] font-medium md:mx-0 md:max-w-none md:text-[64px]">
           {/* Line breaks pinned on desktop to match the Figma wrap */}
           Every cup <br className="hidden md:block" />
           <em>deserves</em> to <br className="hidden md:block" />

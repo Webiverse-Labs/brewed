@@ -4,7 +4,7 @@ import CafeImg from "./CafeImg.jsx";
 import BookmarkBtn from "../ui/BookmarkBtn.jsx";
 import BeanRating from "../ui/BeanRating.jsx";
 
-function CafeCard({ cafe, saved }) {
+function CafeCard({ cafe }) {
   return (
     <Link
       to={`/cafes/${cafe.id}`}
@@ -12,7 +12,7 @@ function CafeCard({ cafe, saved }) {
     >
       <div className="relative h-40">
         <CafeImg cafe={cafe} />
-        <BookmarkBtn defaultActive={saved} className="absolute top-3 right-3" />
+        <BookmarkBtn cafeId={cafe.id} className="absolute top-3 right-3" />
       </div>
       <div className="flex flex-col gap-1 p-3.5">
         <h3 className="truncate font-display text-[15px] font-semibold">{cafe.name}</h3>

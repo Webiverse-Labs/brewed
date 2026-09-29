@@ -5,7 +5,7 @@ import MobileTabBar from "./MobileTabBar.jsx";
 import SearchOverlay from "../cafe/SearchOverlay.jsx";
 import SuggestCafeForm from "../cafe/SuggestCafeForm.jsx";
 import Modal from "../ui/Modal.jsx";
-import { notifications } from "../../data/mock.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 // Signed-in shell. Pages reach the shared overlays through useOutletContext():
 //   const { openSuggest, openExplore } = useOutletContext();
@@ -21,7 +21,8 @@ function UserLayout() {
     setSuggestOpen(true);
   }, []);
 
-  const hasUnread = notifications.some((n) => !n.read);
+  const { user } = useAuth();
+  const hasUnread = user.unreadNotifications > 0;
 
   return (
     <div className="min-h-screen">

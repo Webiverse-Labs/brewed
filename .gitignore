@@ -2,6 +2,9 @@
 node_modules/
 jspm_packages/
 
+# User-uploaded files (Multer disk storage)
+backend/uploads/
+
 # Secrets and Environment Variables
 .env
 .env.local

@@ -7,27 +7,39 @@ import Avatar from "../../components/ui/Avatar.jsx";
 import Button from "../../components/ui/Button.jsx";
 import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
-import { matches } from "../../lib/search.js";
-import { users } from "../../data/mock.js";
+import LoadError from "../../components/ui/LoadError.jsx";
+import Loader from "../../components/ui/Loader.jsx";
+import Modal from "../../components/ui/Modal.jsx";
+import api, { errorMessage } from "../../lib/api.js";
+import { formatDate, formatMonth } from "../../lib/format.js";
+import { useApi } from "../../hooks/useApi.js";
+import { useDebounced } from "../../hooks/useDebounced.js";
 
 const columns = ["User", "Email", "Visits", "Joined", "Status", "Actions"];
 
 function AdminUsersPage() {
-  // TODO(api): GET /api/admin/users?q=, PATCH /api/admin/users/:id { status }
-  const [rows, setRows] = useState(users);
   const [query, setQuery] = useState("");
+  const q = encodeURIComponent(useDebounced(query.trim()));
+  const { data, loading, error, reload, setData } = useApi(`/admin/users?q=${q}`);
+  const [viewing, setViewing] = useState(null);
 
-  const shown = rows.filter((u) => matches(query, u.name, u.username, u.email));
+  const shown = data?.users ?? [];
 
-  const toggleSuspend = (user) => {
+  const toggleSuspend = async (user) => {
     const status = user.status === "active" ? "suspended" : "active";
-    setRows((all) => all.map((u) => (u.id === user.id ? { ...u, status } : u)));
-    toast.success(`${user.name} ${status === "suspended" ? "suspended" : "reinstated"}.`);
+    try {
+      await api.patch(`/admin/users/${user.id}`, { status });
+      setData((d) => ({ ...d, users: d.users.map((u) => (u.id === user.id ? { ...u, status } : u)) }));
+      setViewing((v) => (v?.id === user.id ? { ...v, status } : v));
+      toast.success(`${user.name} ${status === "suspended" ? "suspended" : "reinstated"}.`);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
   };
 
   const who = (user) => (
     <div className="flex min-w-0 items-center gap-3">
-      <Avatar name={user.name} tone={user.tone} size="sm" />
+      <Avatar name={user.name} src={user.avatarUrl} size="sm" />
       <div className="min-w-0">
         <p className="truncate font-medium">{user.name}</p>
         <p className="truncate text-[13px] text-secondary">@{user.username}</p>
@@ -37,7 +49,7 @@ function AdminUsersPage() {
 
   const actions = (user) => (
     <div className="flex gap-1.5">
-      <Button variant="ghost" size="sm" to={`/u/${user.username}`}>
+      <Button variant="ghost" size="sm" onClick={() => setViewing(user)}>
         View
       </Button>
       <Button variant={user.status === "active" ? "dangerSoft" : "outline"} size="sm" onClick={() => toggleSuspend(user)}>
@@ -60,16 +72,21 @@ function AdminUsersPage() {
         />
       </AdminHeader>
 
+      {loading && !data ? (
+        <Loader />
+      ) : error ? (
+        <LoadError message={error} onRetry={reload} />
+      ) : (
       <DataTable
         columns={columns}
         rows={shown}
-        emptyText="No users match your search."
+        emptyText={query.trim() ? "No users match your search." : "No users yet."}
         renderRow={(user) => (
           <>
             <td>{who(user)}</td>
             <td className="text-secondary">{user.email}</td>
             <td>{user.visits}</td>
-            <td className="whitespace-nowrap">{user.joined}</td>
+            <td className="whitespace-nowrap">{formatMonth(user.createdAt)}</td>
             <td>
               <StatusBadge status={user.status} />
             </td>
@@ -83,12 +100,48 @@ function AdminUsersPage() {
               <StatusBadge status={user.status} />
             </div>
             <p className="mt-2 truncate text-[13px] text-secondary">
-              {user.email} · {user.visits} visits · Joined {user.joined}
+              {user.email} · {user.visits} visits · Joined {formatMonth(user.createdAt)}
             </p>
             <div className="mt-3">{actions(user)}</div>
           </>
         )}
       />
+      )}
+
+      <Modal open={viewing !== null} onClose={() => setViewing(null)} title="User details" size="sm">
+        {viewing && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <Avatar name={viewing.name} src={viewing.avatarUrl} size="ml" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-lg font-medium">{viewing.name}</p>
+                <p className="truncate text-sm text-secondary">@{viewing.username}</p>
+              </div>
+              <StatusBadge status={viewing.status} />
+            </div>
+            {viewing.bio && <p className="text-[15px]">{viewing.bio}</p>}
+            <dl className="grid grid-cols-2 gap-3 text-[15px]">
+              {[
+                ["Email", viewing.email],
+                ["Visits logged", viewing.visits],
+                ["Joined", formatDate(viewing.createdAt)],
+              ].map(([term, value]) => (
+                <div key={term} className={term === "Email" ? "col-span-2" : undefined}>
+                  <dt className="text-xs font-semibold tracking-wide text-secondary uppercase">{term}</dt>
+                  <dd className="mt-0.5 truncate">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <Button
+              variant={viewing.status === "active" ? "dangerSoft" : "outline"}
+              onClick={() => toggleSuspend(viewing)}
+              className="self-start"
+            >
+              {viewing.status === "active" ? "Suspend user" : "Reinstate user"}
+            </Button>
+          </div>
+        )}
+      </Modal>
     </>
   );
 }

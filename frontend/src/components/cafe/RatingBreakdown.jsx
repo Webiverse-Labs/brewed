@@ -3,6 +3,8 @@ import BeanRating from "../ui/BeanRating.jsx";
 function RatingBreakdown({ average, counts }) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
+  if (total === 0) return <p className="text-[15px] text-secondary">No ratings yet.</p>;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-end gap-3">
@@ -20,7 +22,9 @@ function RatingBreakdown({ average, counts }) {
           </li>
         ))}
       </ul>
-      <p className="text-xs text-secondary">Based on {total} visits</p>
+      <p className="text-xs text-secondary">
+        Based on {total} {total === 1 ? "visit" : "visits"}
+      </p>
     </div>
   );
 }

@@ -1,18 +1,39 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Field from "../ui/Field.jsx";
 import PasswordInput from "../ui/PasswordInput.jsx";
 import SectionLabel from "../ui/SectionLabel.jsx";
 import Button from "../ui/Button.jsx";
+import api, { errorMessage } from "../../lib/api.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 function SecuritySettings({ onDeleteAccount }) {
-  const handlePassword = (e) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
+
+  const handlePassword = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
     if (data.get("next") !== data.get("confirm")) return toast.error("New passwords don't match.");
-    // TODO(api): PATCH /api/users/me/password
-    toast.success("Password updated.");
-    form.reset();
+
+    setSaving(true);
+    try {
+      await api.patch("/users/me/password", { current: data.get("current"), next: data.get("next") });
+      toast.success("Password updated.");
+      form.reset();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
   };
 
   return (
@@ -28,8 +49,8 @@ function SecuritySettings({ onDeleteAccount }) {
         <Field label="Confirm New Password">
           <PasswordInput name="confirm" required minLength={8} autoComplete="new-password" />
         </Field>
-        <Button type="submit" className="self-start">
-          Update Password
+        <Button type="submit" className="self-start" disabled={saving}>
+          {saving ? "Updating…" : "Update Password"}
         </Button>
       </form>
 
@@ -38,7 +59,7 @@ function SecuritySettings({ onDeleteAccount }) {
           <p className="text-[15px] font-medium">Log Out</p>
           <p className="text-[13px] text-secondary">You can log back in anytime.</p>
         </div>
-        <Button to="/login" variant="outline" size="sm" shape="pill">
+        <Button onClick={handleLogout} variant="outline" size="sm" shape="pill">
           Log Out
         </Button>
       </div>
