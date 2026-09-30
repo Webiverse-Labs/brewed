@@ -1,10 +1,17 @@
 import { cn } from "../../lib/cn.js";
+import { moveTabFocus } from "../../lib/tablistKeys.js";
 
 // Pill tabs. `tabs` is [{ value, label }]; the active pill is espresso.
 function FilterTabs({ tabs, value, onChange, size = "md", className, label = "Filter" }) {
+  const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.value === value));
   return (
-    <div role="tablist" aria-label={label} className={cn("scrollbar-none flex gap-2 overflow-x-auto", className)}>
-      {tabs.map((tab) => {
+    <div
+      role="tablist"
+      aria-label={label}
+      onKeyDown={moveTabFocus}
+      className={cn("scrollbar-none flex gap-2 overflow-x-auto", className)}
+    >
+      {tabs.map((tab, i) => {
         const active = tab.value === value;
         return (
           <button
@@ -12,6 +19,7 @@ function FilterTabs({ tabs, value, onChange, size = "md", className, label = "Fi
             type="button"
             role="tab"
             aria-selected={active}
+            tabIndex={i === activeIndex ? 0 : -1}
             onClick={() => onChange(tab.value)}
             className={cn(
               "shrink-0 rounded-full border whitespace-nowrap transition-colors",
