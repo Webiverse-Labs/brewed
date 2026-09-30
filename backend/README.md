@@ -65,7 +65,7 @@ comes from an allowlist, not the uploader's filename, and each file's first byte
 
 ## Smoke tests
 
-`scripts/smoke.mjs` (127 checks) and `scripts/smoke_security.mjs` (7 upload-safety checks) call the running API end to end.
+`scripts/smoke.mjs` (130 checks) and `scripts/smoke_security.mjs` (7 upload-safety checks) call the running API end to end.
 They **write data** (sign up, suspend and delete accounts), so run them only against a freshly seeded throwaway database,
 never the shared Atlas cluster or the test env. CI runs them on every PR. `smoke.mjs` also needs `MONGO_URI`: emailed tokens are
 stored hashed, so it writes known ones straight into the database.
