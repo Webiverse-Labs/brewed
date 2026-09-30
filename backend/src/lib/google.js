@@ -19,7 +19,9 @@ export async function verifyGoogleCredential(credential) {
   try {
     const ticket = await googleClient.verifyIdToken({ idToken: credential, audience });
     return ticket.getPayload();
-  } catch {
+  } catch (error) {
+    //the reason goes in the function log (wrong audience, expired, bad signature, couldn't fetch Google's keys…); the token never does
+    console.warn("Google ID token rejected:", error.message);
     throw new ApiError(401, "That Google sign-in couldn't be verified.");
   }
 }
