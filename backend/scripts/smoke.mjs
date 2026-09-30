@@ -127,7 +127,8 @@ r = await newbie("POST", "/api/logs", undefined, { form: fd });
 check("diary log with 2 photos -> 201", r.status === 201 && r.body.log?.photos?.length === 2, JSON.stringify(r));
 check("empty-name item dropped", r.body.log?.items?.length === 1, JSON.stringify(r.body.log?.items));
 const photoUrl = r.body.log?.photos?.[0];
-r = await anon("GET", photoUrl);
+//no photo means the upload above failed: report FAIL here instead of crashing on fetch(BASE + undefined)
+r = photoUrl ? await anon("GET", photoUrl) : { status: 0 };
 check("uploaded photo served at /uploads", r.status === 200, `${photoUrl} -> ${r.status}`);
 fd = new FormData(); fd.set("cafeId", onyx.id); fd.set("type", "diary"); fd.set("rating", "3");
 fd.append("photos", new Blob(["not an image"], { type: "text/plain" }), "x.txt");
