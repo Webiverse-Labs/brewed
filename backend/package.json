@@ -16,7 +16,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "smoke": "node scripts/smoke.mjs && node scripts/smoke_security.mjs"
   },
   "author": "Wion M. Quintela",
   "license": "ISC",

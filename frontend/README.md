@@ -21,6 +21,9 @@ VITE_API_URL=http://localhost:4000
 
 If you change the frontend port, also set `CLIENT_URL` in `backend/.env`, or the browser will block the requests (CORS).
 
+`npm run build` makes a production build that calls the API on **its own origin** (`/api`) unless `VITE_API_URL` is set.
+That's how the test deploy works: on Vercel, `dist/` and the API share one domain (see [`docs/deploy/test-environment.md`](../docs/deploy/test-environment.md)).
+
 Other scripts: `npm run lint` (oxlint), `npm run build`, `npm run preview`.
 
 ## How it's organized

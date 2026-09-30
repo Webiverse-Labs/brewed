@@ -25,21 +25,22 @@ npm run dev            # http://localhost:4000
 
 `npm run seed` loads the Figma sample data: 4 users (e.g. `margotbrews@example.com`), the admin `admin@brewed.app`,
 8 cafés, 12 logs, follows, suggestions and notifications. It **refuses to run if the database already has users**.
-`npm run seed -- --reset` deletes all Brewed data and uploaded files first. Be careful if the team shares one Atlas cluster.
+`npm run seed -- --reset` deletes all Brewed data and uploaded images first. Be careful if the team shares one Atlas cluster.
 
 ## Project layout
 
 ```text
 src/
-├── server.js          # app setup, mounts every router under /api, error handler last
+├── app.js             # the Express app: mounts every router under /api, error handler last
+├── server.js          # local entry: connect to MongoDB, then listen (Vercel uses ../api/index.js instead)
 ├── seed.js            # sample data loader
 ├── config/db.js       # MongoDB connection
-├── models/            # User, Cafe, Log, Follow, Suggestion, Notification
+├── models/            # User, Cafe, Log, Follow, Suggestion, Notification, Upload (image bytes)
 ├── controllers/       # the logic, one file per resource
 ├── routes/            # URL -> controller, wrapped in asyncHandler
 ├── middlewares/       # auth (protect / optionalAuth), requireAdmin, uploads (Multer), errors
 └── lib/               # ApiError, JWT cookie, café stats, notifications, query helpers
-uploads/               # user-uploaded images (git-ignored), served at /uploads
+scripts/               # smoke tests, and serve-vercel.mjs (runs the Vercel function locally)
 ```
 
 Patterns to follow when adding routes:
@@ -50,8 +51,24 @@ Patterns to follow when adding routes:
 
 ## Uploads
 
-Images go through Multer to `uploads/<cafes|logs|avatars|suggestions>/` and are stored in the database as `/uploads/...` paths.
+Images go through Multer (in memory) and are stored in MongoDB's `uploads` collection (`models/Upload.js`), one document per file,
+under a `/uploads/<cafes|logs|avatars|suggestions>/<uuid>.<ext>` URL. That URL is what `Cafe`, `Log`, `User` and `Suggestion`
+store, and `app.js` serves it. They're not kept on disk because the deploy runs as a Vercel function, which has no lasting disk.
+Images count toward the database's storage (0.5 GB on Atlas Free).
+
 Only JPEG, PNG, WebP and GIF are accepted (5 MB max). SVG is refused because it can carry scripts. The saved extension
 comes from an allowlist, not the uploader's filename, and each file's first bytes must match its claimed type.
-`/uploads` is served with `X-Content-Type-Options: nosniff` and a sandboxing CSP, so a stored file can never run as a page. They live on the server's disk, so a host with a temporary filesystem will lose them on redeploy.
-Switch to a storage service before deploying there.
+`/uploads` is served with `X-Content-Type-Options: nosniff` and a sandboxing CSP, so a stored file can never run as a page.
+
+## Smoke tests
+
+`scripts/smoke.mjs` (99 checks) and `scripts/smoke_security.mjs` (7 upload-safety checks) call the running API end to end.
+They **write data** (sign up, suspend and delete accounts), so run them only against a freshly seeded throwaway database,
+never the shared Atlas cluster or the test env. CI runs them on every PR.
+
+```bash
+docker run -d --rm --name brewed-mongo -p 27017:27017 mongo:7   # throwaway DB (mongo:8 won't start on some newer Linux kernels)
+MONGO_URI=mongodb://127.0.0.1:27017/brewed-smoke SEED_PASSWORD=smoke-test-pw npm run seed
+MONGO_URI=mongodb://127.0.0.1:27017/brewed-smoke npm run dev     # in another terminal
+SEED_PASSWORD=smoke-test-pw API_URL=http://localhost:4000 npm run smoke
+```
