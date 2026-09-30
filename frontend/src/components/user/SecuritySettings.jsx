@@ -32,8 +32,7 @@ function SecuritySettings({ onDeleteAccount }) {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/login");
+    if (await logout()) navigate("/login");
   };
 
   return (

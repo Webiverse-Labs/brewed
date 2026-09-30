@@ -29,7 +29,8 @@ function AdminUsersPage() {
     const status = user.status === "active" ? "suspended" : "active";
     try {
       await api.patch(`/admin/users/${user.id}`, { status });
-      setData((d) => ({ ...d, users: d.users.map((u) => (u.id === user.id ? { ...u, status } : u)) }));
+      //d is null if a search failed meanwhile; the detail modal still updates below
+      setData((d) => d && { ...d, users: d.users.map((u) => (u.id === user.id ? { ...u, status } : u)) });
       setViewing((v) => (v?.id === user.id ? { ...v, status } : v));
       toast.success(`${user.name} ${status === "suspended" ? "suspended" : "reinstated"}.`);
     } catch (err) {

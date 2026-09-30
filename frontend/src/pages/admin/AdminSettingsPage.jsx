@@ -31,8 +31,7 @@ function AdminSettingsPage() {
   };
 
   const signOut = async () => {
-    await logout();
-    navigate("/admin/login");
+    if (await logout()) navigate("/admin/login");
   };
 
   return (

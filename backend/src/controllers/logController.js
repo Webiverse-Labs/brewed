@@ -29,6 +29,7 @@ function parseItems(raw) {
 //POST /api/logs (multipart)
 //fields: type review|diary, cafeId, visitedAt, rating, items (JSON), text, anonymous; files: photos[] (diary only)
 export async function createLog(req, res) {
+  let saved = false; //once the log exists it references the photos, so a later failure must not delete them
   try {
     const body = req.body ?? {};
     if (!isObjectId(body.cafeId)) throw new ApiError(400, "Choose the café you visited.");
@@ -52,11 +53,12 @@ export async function createLog(req, res) {
       anonymous: type === "review" && toBool(body.anonymous),
       photos,
     });
+    saved = true;
 
     await refreshCafeStats(cafe._id);
     res.status(201).json({ log });
   } catch (err) {
-    discardUploads(req);
+    if (!saved) discardUploads(req);
     throw err;
   }
 }
