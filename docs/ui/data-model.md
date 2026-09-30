@@ -1,6 +1,7 @@
-# Data model and API (derived from the screens)
+# Data model and API
 
-This is a starting point for `backend/src/models` and `backend/src/routes`. Every field here appears somewhere in the designs. Anything not in the designs is marked *(assumed)*.
+This is what `backend/src/models` and `backend/src/routes` actually implement. Every field comes from the designs, except the ones marked *(added)*.
+API responses use `id` (never `_id`) and never include `__v` or the password hash.
 
 ## Collections
 
@@ -8,74 +9,87 @@ This is a starting point for `backend/src/models` and `backend/src/routes`. Ever
 | Field | Type | Seen on |
 |---|---|---|
 | `name` | String, required | Sign Up "Full Name", Settings "Display Name" |
-| `username` | String, unique | `@margotbrews` handles, Settings "Username" |
+| `username` | String, unique, 3–30 of `a-z 0-9 _ .` | `@margotbrews` handles, Settings "Username". Derived from the email at sign-up |
 | `email` | String, unique | Sign Up, admin Users table |
-| `password` | String (bcrypt hash) *(bcrypt not installed yet)* | Sign Up, Settings → Security |
-| `bio` | String | Profile, Settings |
-| `avatarUrl` | String | Settings "Change Avatar". Falls back to initials |
-| `role` | `'user' \| 'admin'` | Admin login |
-| `status` | `'active' \| 'suspended'` | Admin Users "Suspend" |
-| `favorites` | [ObjectId → Cafe] | Bookmark button, Profile "Favorites" tab |
-| timestamps | | Admin Users "Joined" |
+| `password` | bcrypt hash, min 8 chars, never selected by default | Sign Up, Settings → Security |
+| `bio` | String (≤ 200) | Profile, Settings |
+| `avatarUrl` | `/uploads/avatars/…` | Settings "Change Avatar". Falls back to initials |
+| `role` | `user` \| `admin` | Admin login |
+| `status` | `active` \| `suspended` | Admin Users "Suspend" |
+| `favorites` | [Cafe] | Bookmark button, Profile "Favorites" tab |
+| `createdAt` | Date | Admin Users "Joined" |
 
 ### `Follow`
-`{ follower: User, following: User }`, with a unique compound index. Drives "started following you", "Follow / Following" and the Coffee Drinkers search.
+`{ follower, following }`, with a unique index on the pair. Drives "started following you", Follow / Following, and `isFollowing`.
 
 ### `Cafe`
 | Field | Type | Seen on |
 |---|---|---|
-| `name` | String, required | everywhere |
-| `area` | String | "Poblacion, Makati" on cards |
-| `address` | String | Café profile DETAILS, admin Add Café |
-| `hours` | String | "Mon–Fri 7 am – 6 pm · Sat–Sun 8 am – 5 pm" |
-| `description` | String | Café profile ABOUT |
-| `tags` | [String] | Admin Add Café "Tags" |
-| `photos` | [String] | Hero image, card image (multer upload) |
-| `isActive` | Boolean | Admin "Disable" |
-| `featured` | Boolean *(assumed)* | Home "Featured Cafés" |
-| `avgRating`, `visitCount` | Number (denormalized, updated when a Log is saved) | Cards, admin table, "Based on 245 visits" |
+| `name`, `address` | String, required | everywhere |
+| `area` | String | "Poblacion, Makati" on cards. Derived from the last two parts of the address if not given |
+| `hours`, `description` | String | Café profile |
+| `tags` | [String] | Admin "Tags" |
+| `photos` | [`/uploads/cafes/…`] | `photo` (a virtual field) is the first one, used as the cover |
+| `active` | Boolean | Admin "Disable". Disabled cafés disappear from the user app |
+| `featured` | Boolean *(added)* | Home "Featured Cafés". Admins set it with a toggle in the café editor |
+| `rating`, `visits` | Number | Worked out from the café's logs by `lib/cafeStats.js`. Never set these by hand |
 
 ### `Log` (a visit)
-| Field | Type | Notes |
-|---|---|---|
-| `user` | ObjectId → User | |
-| `cafe` | ObjectId → Cafe | |
-| `type` | `'review' \| 'diary'` | Review = public, diary = private to the author |
-| `visitedAt` | Date | "Date Visited" |
-| `rating` | Number 1–5 | "Overall Rating" (beans) |
-| `items` | `[{ name, category, rating, note }]` | "What did you order?" |
-| `text` | String | "Written review" |
-| `anonymous` | Boolean | Review only: shows as "Anonymous" / "??" |
-| `photos` | [String] | Diary only in the current design |
-| timestamps | | Review date on the café page |
+| Field | Notes |
+|---|---|
+| `user`, `cafe` | Required |
+| `type` | `review` (public) \| `diary` (private to the author) |
+| `visitedAt` | Date, not in the future |
+| `rating` | 1–5, required |
+| `items` | `[{ name, category: Coffee\|Tea\|Pastry\|Food\|Other, rating 0–5, note }]` |
+| `text` | Written review |
+| `anonymous` | Reviews only. The API hides the author, and the review never appears on the author's public profile |
+| `photos` | Diary only (as in the design), up to 6 |
 
 ### `Suggestion`
-`{ name*, address*, hours, description, notes, photo, submittedBy: User, status: 'pending'|'approved'|'rejected', reviewedAt }`
-Approving one should create a `Cafe` and send a `system` notification to the submitter ("…has been approved and published").
+`{ name*, address*, hours, description, notes, photo, submittedBy, status: pending|approved|rejected, reviewedAt }`.
+Approving creates a `Cafe`. Approving or rejecting sends the submitter a `system` notification.
 
 ### `Notification`
-`{ user (recipient), type: 'follow'|'cafe_update'|'system', actor?: User, cafe?: Cafe, message, read: Boolean, createdAt }`
-The filter chips map to `type`: All · Café Updates · System (a hidden variant also has Followers).
+`{ user (recipient), type: follow|cafe_update|system, actor?, cafe?, message, read }`.
+They are created by: a new follow (`follow`), an admin changing the opening hours of a café the user saved (`cafe_update`), and a suggestion being reviewed (`system`).
+
+---
 
 ## Endpoints
 
-Auth uses a JWT in an httpOnly cookie: `cookie-parser` is installed and `api.js` already sends `withCredentials: true`.
-Admin routes go through a `requireAdmin` middleware.
+Base URL: `http://localhost:4000/api`. Auth is a JWT in an httpOnly `token` cookie. The frontend sends it with `withCredentials: true`.
+Errors are always `{ message }` with the right status: 400 bad input, 401 not logged in, 403 not allowed or suspended, 404, 409 conflict.
 
-| Method & path | Screen |
-|---|---|
-| `POST /api/auth/signup` · `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` | Sign Up, Log In, Profile menu |
-| `GET /api/cafes?q=&sort=popular\|rating\|new&featured=` | Home rows, Explore, Log a Visit café search |
-| `GET /api/cafes/:id` · `GET /api/cafes/:id/logs` | Café profile (public reviews only) |
-| `POST /api/cafes/:id/favorite` · `DELETE /api/cafes/:id/favorite` | Bookmark button |
-| `POST /api/logs` (multipart) | Log a Visit |
-| `GET /api/users?q=` · `GET /api/users/:username` · `GET /api/users/:username/{visited,favorites,logs}` | Coffee Drinkers search, Profile tabs |
-| `POST /api/users/:id/follow` · `DELETE /api/users/:id/follow` | Follow button |
-| `PATCH /api/users/me` · `POST /api/users/me/avatar` · `PATCH /api/users/me/password` · `DELETE /api/users/me` | Settings |
-| `GET /api/notifications?type=` · `PATCH /api/notifications/read-all` | Notifications |
-| `POST /api/suggestions` (multipart) | Suggest a Café modal |
-| `POST /api/admin/login` · `GET /api/admin/stats` | Admin login, Dashboard |
-| `POST /api/cafes` · `PATCH /api/cafes/:id` (admin) | Admin Cafés (Add / Edit / Disable) |
-| `GET /api/admin/users?q=` · `PATCH /api/admin/users/:id` {status} | Admin Users |
-| `GET /api/suggestions` · `PATCH /api/suggestions/:id` {status} | Admin Suggestions |
-| `PATCH /api/admin/me` | Admin Settings |
+🔓 public · 🔑 logged in · 🛡️ admin. "optional" means it works either way but personalizes the result when logged in.
+
+| Method & path | Who | Notes |
+|---|---|---|
+| `POST /auth/signup` `{ name, email, password }` | 🔓 | Sets the cookie → `{ user }` |
+| `POST /auth/login` `{ email, password }` | 🔓 | 401 for wrong credentials, 403 if suspended |
+| `POST /auth/logout` | 🔓 | Clears the cookie |
+| `GET /auth/me` | optional | `{ user }` including `favorites` and `unreadNotifications`, or `{ user: null }` |
+| `GET /cafes?q=&sort=popular\|rating\|new&featured=true&limit=` | 🔓 | Active cafés only. `q` matches name, area and tags |
+| `GET /cafes/:id` | optional | Adds `ratingCounts {5..1}` and `isFavorite` |
+| `GET /cafes/:id/logs` | 🔓 | Public reviews only. Anonymous ones have `user: null` |
+| `POST` / `DELETE /cafes/:id/favorite` | 🔑 | → `{ favorites }` |
+| `POST /logs` (multipart) | 🔑 | `type, cafeId, visitedAt, rating, text, anonymous, items` (a JSON string) + `photos[]` |
+| `GET /users?q=` | optional | Coffee Drinkers search, adds `isFollowing` |
+| `GET /users/:username` | optional | Profile header: `visits`, `avgRating`, `isFollowing`, `isMe` |
+| `GET /users/:username/visited` · `/favorites` · `/logs` | optional | Diary entries and anonymous reviews are only included for the owner |
+| `POST` / `DELETE /users/:id/follow` | 🔑 | → `{ isFollowing }` |
+| `PATCH /users/me` `{ name?, username?, bio? }` | 🔑 | → `{ user }` |
+| `POST /users/me/avatar` (multipart `avatar`) | 🔑 | → `{ user }` |
+| `PATCH /users/me/password` `{ current, next }` | 🔑 | |
+| `DELETE /users/me` | 🔑 | Deletes the user's logs, follows, notifications and uploads |
+| `GET /notifications?type=` | 🔑 | → `{ notifications, unread }` |
+| `PATCH /notifications/read-all` · `/notifications/:id/read` | 🔑 | → `{ unread }` |
+| `POST /suggestions` (multipart `photo`) | 🔑 | |
+| `POST /admin/login` | 🔓 | Like login, but only succeeds for admins |
+| `GET /admin/stats` | 🛡️ | Totals, last-7-day counts, recent suggestions and users |
+| `GET /admin/cafes?q=` · `POST /admin/cafes` · `PATCH /admin/cafes/:id` | 🛡️ | Includes disabled cafés. Create and edit are multipart (`photos[]`). `PATCH { active }` to disable or enable |
+| `GET /admin/users?q=` · `PATCH /admin/users/:id { status }` | 🛡️ | Admins can't be suspended |
+| `GET /admin/suggestions` · `PATCH /admin/suggestions/:id { status }` | 🛡️ | Only pending suggestions can be reviewed (otherwise 409) |
+| `PATCH /admin/me { name?, email? }` | 🛡️ | |
+
+Uploaded images are served from `http://localhost:4000/uploads/…`. The frontend turns those paths into full URLs with `lib/assetUrl.js`.

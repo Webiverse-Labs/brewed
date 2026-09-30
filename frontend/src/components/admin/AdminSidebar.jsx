@@ -1,7 +1,8 @@
-import { Link, NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Coffee, LayoutDashboard, Lightbulb, LogOut, Settings, Users } from "lucide-react";
 import Logo from "../ui/Logo.jsx";
 import { cn } from "../../lib/cn.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 const links = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -19,6 +20,13 @@ const itemClass = (active) =>
   );
 
 function AdminSidebar({ onNavigate }) {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const signOut = async () => {
+    if (await logout()) navigate("/admin/login");
+  };
+
   return (
     <aside className="flex min-h-full w-56 flex-col border-r border-base-300 bg-surface">
       <div className="flex h-24 flex-col justify-center gap-1 px-6">
@@ -36,10 +44,10 @@ function AdminSidebar({ onNavigate }) {
       </nav>
 
       <div className="border-t border-base-300 px-3 py-4">
-        <Link to="/admin/login" className={itemClass(false)}>
+        <button type="button" onClick={signOut} className={cn(itemClass(false), "w-full")}>
           <LogOut size={17} />
           Sign Out
-        </Link>
+        </button>
       </div>
     </aside>
   );

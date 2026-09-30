@@ -1,12 +1,13 @@
-import { CircleAlert, MapPin } from "lucide-react";
+import { CircleAlert, MapPin, UserRound } from "lucide-react";
 import Avatar from "../ui/Avatar.jsx";
 import { cn } from "../../lib/cn.js";
-import { getUser } from "../../data/mock.js";
+import { timeAgo } from "../../lib/format.js";
 
-const icons = { cafe_update: MapPin, system: CircleAlert };
+//`follow` uses the actor's avatar; the icon is only a fallback if that account was deleted
+const icons = { follow: UserRound, cafe_update: MapPin, system: CircleAlert };
 
 function NotificationItem({ notification, onRead }) {
-  const actor = notification.actorId && getUser(notification.actorId);
+  const actor = notification.actor;
   const Icon = icons[notification.type];
 
   return (
@@ -20,7 +21,7 @@ function NotificationItem({ notification, onRead }) {
       )}
     >
       {actor ? (
-        <Avatar name={actor.name} tone={actor.tone} />
+        <Avatar name={actor.name} src={actor.avatarUrl} />
       ) : (
         <span className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-secondary">
           <Icon size={17} />
@@ -28,7 +29,7 @@ function NotificationItem({ notification, onRead }) {
       )}
       <span className="min-w-0 flex-1">
         <span className="block text-[15px]">{notification.message}</span>
-        <span className="mt-0.5 block text-xs text-secondary">{notification.time}</span>
+        <span className="mt-0.5 block text-xs text-secondary">{timeAgo(notification.createdAt)}</span>
       </span>
       {!notification.read && <span className="size-2 shrink-0 rounded-full bg-accent" aria-label="Unread" />}
     </button>

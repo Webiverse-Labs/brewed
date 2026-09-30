@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react";
 import CafeCard from "./CafeCard.jsx";
 
 // Section title + horizontally scrolling cards. The row bleeds to the right edge, as in the design.
-function CafeRow({ title, cafes, savedIds = [], onSeeAll }) {
+function CafeRow({ title, cafes, onSeeAll }) {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -17,7 +17,7 @@ function CafeRow({ title, cafes, savedIds = [], onSeeAll }) {
       </div>
       <div className="scrollbar-none -mr-5 flex snap-x gap-4 overflow-x-auto pr-5 pb-2 md:-mr-10 md:pr-10">
         {cafes.map((cafe) => (
-          <CafeCard key={cafe.id} cafe={cafe} saved={savedIds.includes(cafe.id)} />
+          <CafeCard key={cafe.id} cafe={cafe} />
         ))}
       </div>
     </section>

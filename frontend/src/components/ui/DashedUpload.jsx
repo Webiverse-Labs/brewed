@@ -3,8 +3,10 @@ import { X } from "lucide-react";
 import { dashedClass } from "./inputStyles.js";
 import { cn } from "../../lib/cn.js";
 
-// File picker styled as a dashed box. UI-only phase: files stay in the browser as previews.
-function DashedUpload({ icon: Icon, label, multiple = false, name, className }) {
+// File picker styled as a dashed box with previews. The input is cleared after each pick (so the
+// same file can be re-added), which means a surrounding <form> can't read the files: the parent
+// gets them through `onChange(files)` and appends them to its FormData.
+function DashedUpload({ icon: Icon, label, multiple = false, max = 6, onChange, className }) {
   const [files, setFiles] = useState([]);
   const filesRef = useRef(files);
 
@@ -15,18 +17,23 @@ function DashedUpload({ icon: Icon, label, multiple = false, name, className }) 
   // Revoke preview URLs only on unmount — revoking per render would blank previews still on screen.
   useEffect(() => () => filesRef.current.forEach((f) => URL.revokeObjectURL(f.url)), []);
 
+  const update = (next) => {
+    setFiles(next);
+    onChange?.(next.map((f) => f.file));
+  };
+
   const handleChange = (e) => {
     const picked = Array.from(e.target.files ?? []).map((file) => ({ file, url: URL.createObjectURL(file) }));
-    setFiles((prev) => {
-      if (!multiple) prev.forEach((f) => URL.revokeObjectURL(f.url));
-      return multiple ? [...prev, ...picked] : picked;
-    });
     e.target.value = "";
+    if (!multiple) files.forEach((f) => URL.revokeObjectURL(f.url));
+    const next = multiple ? [...files, ...picked] : picked;
+    next.slice(max).forEach((f) => URL.revokeObjectURL(f.url));
+    update(next.slice(0, max));
   };
 
   const remove = (url) => {
     URL.revokeObjectURL(url);
-    setFiles((prev) => prev.filter((f) => f.url !== url));
+    update(files.filter((f) => f.url !== url));
   };
 
   return (
@@ -34,7 +41,7 @@ function DashedUpload({ icon: Icon, label, multiple = false, name, className }) 
       <label className={dashedClass}>
         {Icon && <Icon size={16} />}
         {label}
-        <input type="file" accept="image/*" multiple={multiple} name={name} onChange={handleChange} className="sr-only" />
+        <input type="file" accept="image/*" multiple={multiple} onChange={handleChange} className="sr-only" />
       </label>
       {files.length > 0 && (
         <div className="flex flex-wrap gap-2">

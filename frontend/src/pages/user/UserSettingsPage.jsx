@@ -8,7 +8,9 @@ import Modal from "../../components/ui/Modal.jsx";
 import Button from "../../components/ui/Button.jsx";
 import ProfileSettingsForm from "../../components/user/ProfileSettingsForm.jsx";
 import SecuritySettings from "../../components/user/SecuritySettings.jsx";
+import api, { errorMessage } from "../../lib/api.js";
 import { cn } from "../../lib/cn.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 const sections = [
   { value: "profile", label: "Profile", icon: UserRound },
@@ -18,14 +20,23 @@ const sections = [
 function UserSettingsPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const tab = params.get("tab") === "security" ? "security" : "profile";
 
-  const deleteAccount = () => {
-    // TODO(api): DELETE /api/users/me
-    setConfirmOpen(false);
-    toast("Your account has been deleted.");
-    navigate("/signup");
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await api.delete("/users/me");
+      //clear the user and leave in the same update, so the guards don't bounce us to /login first
+      setUser(null);
+      navigate("/signup", { replace: true });
+      toast("Your account has been deleted.");
+    } catch (err) {
+      toast.error(errorMessage(err));
+      setDeleting(false);
+    }
   };
 
   return (
@@ -62,8 +73,8 @@ function UserSettingsPage() {
           <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={deleteAccount}>
-            Yes, Delete
+          <Button variant="danger" onClick={deleteAccount} disabled={deleting}>
+            {deleting ? "Deleting…" : "Yes, Delete"}
           </Button>
         </div>
       </Modal>

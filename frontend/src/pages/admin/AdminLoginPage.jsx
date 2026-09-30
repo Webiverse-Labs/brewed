@@ -1,17 +1,31 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import SectionLabel from "../../components/ui/SectionLabel.jsx";
 import Field from "../../components/ui/Field.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
 import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
+import { errorMessage } from "../../lib/api.js";
+import { useAuth } from "../../hooks/useAuth.js";
 
 function AdminLoginPage() {
   const navigate = useNavigate();
+  const { state } = useLocation();
+  const { login } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO(api): POST /api/admin/login
-    navigate("/admin");
+    const { email, password } = Object.fromEntries(new FormData(e.currentTarget));
+    setSubmitting(true);
+    try {
+      await login(email, password, { admin: true });
+      navigate(state?.from?.pathname ?? "/admin", { replace: true });
+    } catch (err) {
+      toast.error(errorMessage(err));
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -25,8 +39,8 @@ function AdminLoginPage() {
         <Field label="Password">
           <PasswordInput name="password" required placeholder="Admin password" autoComplete="current-password" />
         </Field>
-        <Button type="submit" block className="mt-1">
-          Access Dashboard
+        <Button type="submit" block className="mt-1" disabled={submitting}>
+          {submitting ? "Checking…" : "Access Dashboard"}
         </Button>
         <Link to="/signup" className="text-center text-sm text-secondary hover:text-base-content">
           ← Back to Sign Up

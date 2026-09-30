@@ -1,3 +1,4 @@
+import { assetUrl } from "../../lib/assetUrl.js";
 import { cn } from "../../lib/cn.js";
 
 const tones = {
@@ -24,19 +25,29 @@ const initialsOf = (name) =>
     .join("")
     .toUpperCase();
 
+// same name -> same color everywhere, cycling through the three brand tones
+const toneFor = (name) => {
+  const palette = ["accent", "secondary", "primary"];
+  let hash = 0;
+  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return palette[hash % palette.length];
+};
+
 // `initials` overrides the derived ones (e.g. "??" for anonymous reviews).
-function Avatar({ name = "", initials, tone = "accent", size = "md", src, className }) {
+// `src` accepts an "/uploads/..." path from the API. `tone` defaults to one derived from the name.
+function Avatar({ name = "", initials, tone, size = "md", src, className }) {
+  const image = assetUrl(src);
   return (
     <span
       className={cn(
         "inline-grid shrink-0 place-items-center overflow-hidden rounded-full font-semibold",
-        tones[tone],
+        tones[tone ?? toneFor(name)],
         sizes[size],
         className,
       )}
       aria-hidden="true"
     >
-      {src ? <img src={src} alt="" className="size-full object-cover" /> : (initials ?? initialsOf(name))}
+      {image ? <img src={image} alt="" className="size-full object-cover" /> : (initials ?? initialsOf(name))}
     </span>
   );
 }
