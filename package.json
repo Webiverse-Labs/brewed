@@ -1,0 +1,6 @@
+{
+  "name": "brewed",
+  "private": true,
+  "type": "module",
+  "description": "Repo root: only here so Vercel runs api/index.js as an ES module. Frontend and backend have their own package.json."
+}

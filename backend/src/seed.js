@@ -2,7 +2,6 @@
 //  npm run seed            -> only runs on an empty database
 //  npm run seed -- --reset -> deletes all Brewed data first (careful on a shared cluster)
 //Every seeded account, including admin@brewed.app, uses SEED_PASSWORD from backend/.env.
-import fs from "node:fs";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import connectDB from "./config/db.js";
@@ -11,9 +10,9 @@ import Follow from "./models/Follow.js";
 import Log from "./models/Log.js";
 import Notification from "./models/Notification.js";
 import Suggestion from "./models/Suggestion.js";
+import Upload from "./models/Upload.js";
 import User from "./models/User.js";
 import { refreshCafeStats } from "./lib/cafeStats.js";
-import { UPLOAD_ROOT } from "./middlewares/uploadMiddleware.js";
 
 dotenv.config();
 
@@ -139,16 +138,8 @@ async function seed() {
     process.exit(1);
   }
   if (reset) {
-    await Promise.all([User, Cafe, Log, Follow, Suggestion, Notification].map((Model) => Model.deleteMany({})));
-    //uploaded files belonged to the deleted records; empty the folders but keep them,
-    //since a running server's Multer created them at startup and won't recreate them
-    if (fs.existsSync(UPLOAD_ROOT)) {
-      for (const folder of fs.readdirSync(UPLOAD_ROOT, { withFileTypes: true })) {
-        if (!folder.isDirectory()) continue;
-        const dir = `${UPLOAD_ROOT}/${folder.name}`;
-        for (const file of fs.readdirSync(dir)) fs.rmSync(`${dir}/${file}`, { recursive: true, force: true });
-      }
-    }
+    //uploaded images belonged to the deleted records, so they go too
+    await Promise.all([User, Cafe, Log, Follow, Suggestion, Notification, Upload].map((Model) => Model.deleteMany({})));
     console.log("Cleared existing Brewed data and uploads.");
   }
 
