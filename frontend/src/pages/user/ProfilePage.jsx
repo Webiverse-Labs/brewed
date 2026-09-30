@@ -119,7 +119,8 @@ function ProfilePage() {
         className="mt-8 mb-5"
       />
 
-      <ProfileTab username={user.username} tab={tab} />
+      {/* key: each tab (and profile) gets a fresh loader; reusing one showed the last tab's data as this tab's and crashed */}
+      <ProfileTab key={`${user.username}/${tab}`} username={user.username} tab={tab} />
     </Page>
   );
 }
