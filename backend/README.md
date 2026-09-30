@@ -66,7 +66,7 @@ comes from an allowlist, not the uploader's filename, and each file's first byte
 
 ## Smoke tests
 
-`scripts/smoke.mjs` (127 checks) and `scripts/smoke_security.mjs` (7 upload-safety checks) call the running API end to end.
+`scripts/smoke.mjs` (130 checks) and `scripts/smoke_security.mjs` (7 upload-safety checks) call the running API end to end.
 `scripts/smoke_google.mjs` (32 checks) runs the app in-process and signs its own Google-style ID tokens, so the Google sign-in
 logic (token checks, linking, the takeover case, admin refusal) is tested without a Google account or network.
 They **write data** (sign up, suspend and delete accounts), so run them only against a freshly seeded throwaway database,
