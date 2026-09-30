@@ -102,8 +102,11 @@ export async function verifyEmail(req, res) {
     : null;
   if (!user) throw new ApiError(400, "This verification link is invalid or has expired.");
 
-  user.set({ emailVerified: true, verifyTokenHash: undefined, verifyTokenExpires: undefined });
-  await user.save();
+  //the token stays valid until it expires, so opening the same link twice is harmless (it only ever sets this one flag)
+  if (!user.emailVerified) {
+    user.emailVerified = true;
+    await user.save();
+  }
   res.json({ message: "Email verified." });
 }
 
@@ -144,17 +147,28 @@ export async function resetPassword(req, res) {
   const { token, password } = req.body ?? {};
   if (!password) throw new ApiError(400, "Enter a new password.");
 
+  const invalidLink = new ApiError(400, "This reset link is invalid or has expired.");
+  const hash = hashToken(token ?? "");
   const user = token
-    ? await User.findOne({ resetTokenHash: hashToken(token), resetTokenExpires: { $gt: new Date() } }).select(
+    ? await User.findOne({ resetTokenHash: hash, resetTokenExpires: { $gt: new Date() } }).select(
         "+password +resetTokenHash +resetTokenExpires",
       )
     : null;
-  if (!user) throw new ApiError(400, "This reset link is invalid or has expired.");
+  if (!user) throw invalidLink;
   if (user.status === "suspended") throw new ApiError(403, "This account has been suspended.");
 
   //following the emailed link proves they own the inbox, so the address counts as verified too
   user.set({ password: String(password), emailVerified: true, resetTokenHash: undefined, resetTokenExpires: undefined });
-  await user.save(); //minlength is checked before hashing, and a bad password leaves the link usable
+  await user.validate(); //a too-short password is refused here, before the link is used up
+
+  //Use the link up with one conditional write. Two requests carrying the same link can both get this far, but only
+  //one update matches, so only one password change goes through.
+  const claimed = await User.updateOne(
+    { _id: user._id, resetTokenHash: hash, resetTokenExpires: { $gt: new Date() } },
+    { $unset: { resetTokenHash: 1, resetTokenExpires: 1 } },
+  );
+  if (!claimed.modifiedCount) throw invalidLink;
+  await user.save();
 
   setAuthCookie(res, user._id);
   res.json({ user: await mePayload(user) });

@@ -78,9 +78,10 @@ check("me has favorites (2)", r.body.user?.favorites?.length === 2, JSON.stringi
 
 // --- email verification + password reset
 await mongoose.connect(process.env.MONGO_URI);
-const plantToken = async (id, kind) => {
+// stores a token whose raw value we know (only the hash is ever stored); a negative ttl plants an already-expired one
+const plantToken = async (id, kind, ttlMs = 3600e3) => {
   const { raw, hash } = createToken();
-  await User.updateOne({ _id: id }, { [`${kind}TokenHash`]: hash, [`${kind}TokenExpires`]: new Date(Date.now() + 3600e3) });
+  await User.updateOne({ _id: id }, { [`${kind}TokenHash`]: hash, [`${kind}TokenExpires`]: new Date(Date.now() + ttlMs) });
   return raw;
 };
 check("signup -> emailVerified false", r0.body.user?.emailVerified === false, JSON.stringify(r0.body.user));
@@ -109,18 +110,21 @@ r = await newbie("POST", "/api/auth/resend-verification");
 check("resend after cooldown -> 200", r.status === 200, JSON.stringify(r));
 r = await newbie("POST", "/api/auth/resend-verification");
 check("immediate second resend -> 429", r.status === 429, JSON.stringify(r));
+// expiry is checked on a still-unverified account, with the token that really matches the stored hash
+const expiredToken = await plantToken(newbieId, "verify", -1000);
+r = await anon("POST", "/api/auth/verify-email", { token: expiredToken });
+check("verify with an expired (but otherwise correct) token -> 400", r.status === 400, JSON.stringify(r));
+r = await newbie("GET", "/api/auth/me");
+check("expired token leaves the account unverified", r.body.user?.emailVerified === false, JSON.stringify(r.body));
 const verifyToken = await plantToken(newbieId, "verify");
 r = await anon("POST", "/api/auth/verify-email", { token: verifyToken });
 check("verify with real token -> 200", r.status === 200, JSON.stringify(r));
 r = await anon("POST", "/api/auth/verify-email", { token: verifyToken });
-check("verify token is single-use -> 400", r.status === 400, JSON.stringify(r));
+check("opening the same verify link again is harmless -> 200", r.status === 200, JSON.stringify(r));
 r = await newbie("GET", "/api/auth/me");
 check("me: emailVerified true after verifying", r.body.user?.emailVerified === true, JSON.stringify(r.body));
 r = await newbie("POST", "/api/auth/resend-verification");
 check("resend when verified -> 400", r.status === 400, JSON.stringify(r));
-await User.updateOne({ _id: newbieId }, { verifyTokenHash: createToken().hash, verifyTokenExpires: new Date(Date.now() - 1000) });
-r = await anon("POST", "/api/auth/verify-email", { token: "x" });
-check("verify with expired token -> 400", r.status === 400, JSON.stringify(r));
 
 r = await anon("POST", "/api/auth/forgot-password", { email: `nobody.${stamp}@example.com` });
 const unknownMessage = r.body.message;
@@ -141,12 +145,20 @@ r = await resetter("GET", "/api/auth/me");
 check("reset logs the user in", r.body.user?.email === newEmail, JSON.stringify(r.body));
 r = await anon("POST", "/api/auth/reset-password", { token: resetToken, password: "another-pass-2" });
 check("reset token is single-use -> 400", r.status === 400, JSON.stringify(r));
+// two requests racing with the same link: exactly one may change the password, and the winner's is the one that sticks
+const raceToken = await plantToken(newbieId, "reset");
+const racePasswords = ["race-password-1", "race-password-2"];
+const race = await Promise.all(racePasswords.map((password) => client()("POST", "/api/auth/reset-password", { token: raceToken, password })));
+check("same reset link used twice at once -> one 200, one 400", race.map((x) => x.status).sort().join() === "200,400", JSON.stringify(race));
+const newPassword = racePasswords[race.findIndex((x) => x.status === 200)];
 r = await client()("POST", "/api/auth/login", { email: newEmail, password: PW });
 check("old password no longer works -> 401", r.status === 401, JSON.stringify(r));
-r = await newbie("POST", "/api/auth/login", { email: newEmail, password: "brand-new-pass1" });
-check("login with the new password -> 200", r.status === 200, JSON.stringify(r));
+r = await client()("POST", "/api/auth/login", { email: newEmail, password: "brand-new-pass1" });
+check("the password from the first reset was replaced by the race winner's -> 401", r.status === 401, JSON.stringify(r));
+r = await newbie("POST", "/api/auth/login", { email: newEmail, password: newPassword });
+check("login with the winning new password -> 200", r.status === 200, JSON.stringify(r));
 //the rest of the script logs newbie in with PW again, so put it back
-await newbie("PATCH", "/api/users/me/password", { current: "brand-new-pass1", next: PW });
+await newbie("PATCH", "/api/users/me/password", { current: newPassword, next: PW });
 
 // --- cafés
 r = await anon("GET", "/api/cafes");

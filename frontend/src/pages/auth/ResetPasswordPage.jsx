@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import SectionLabel from "../../components/ui/SectionLabel.jsx";
 import Field from "../../components/ui/Field.jsx";
@@ -7,11 +7,11 @@ import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
 import api, { errorMessage } from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useEmailLinkToken } from "../../hooks/useEmailLinkToken.js";
 
 // Landing page of the link in the reset email. A successful reset also logs the user in.
 function ResetPasswordPage() {
-  const [params] = useSearchParams();
-  const token = params.get("token");
+  const token = useEmailLinkToken();
   const navigate = useNavigate();
   const { setUser } = useAuth();
   const [submitting, setSubmitting] = useState(false);
