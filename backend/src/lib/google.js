@@ -8,13 +8,24 @@ export const googleClient = new OAuth2Client();
 //header.payload.signature, all base64url; anything else can't be a Google ID token, so don't bother Google
 const LOOKS_LIKE_JWT = /^[\w-]+\.[\w-]+\.[\w-]+$/;
 
-//Why a token was refused, safe for the log. google-auth-library appends the whole token or its payload (with the user's
-//email) after a colon in several messages ("Invalid token signature: <jwt>", "Token used too late, …: {…}"), and a
-//logged ID token can be replayed until it expires. So keep only the text before the first colon, redact anything
-//token-like that is left, and add the error code for network failures (ENOTFOUND, ETIMEDOUT…).
+//Why a token was refused, as a fixed label that is safe to log. google-auth-library puts the whole token, its payload (with
+//the user's email) or other caller-supplied text into many of its error messages, and a logged ID token can be replayed
+//until it expires. So the message text is only ever matched against these patterns, never printed; anything unrecognized
+//is just "other". The error code (ENOTFOUND, ETIMEDOUT…) is added for network failures.
+const REASONS = [
+  [/^Invalid token signature/, "bad signature"],
+  [/^Wrong recipient/, "wrong audience"],
+  [/^Token used too late/, "expired"],
+  [/^Token used too early/, "issued in the future"],
+  [/^Invalid issuer/, "wrong issuer"],
+  [/^(Wrong number of segments|Can't parse token|No pem found)/, "malformed token"],
+  [/^(No issue time|No expiration time|Expiration time too far)/, "bad time claims"],
+];
+
 function safeReason(error) {
-  const head = String(error?.message ?? "").split(":")[0].replace(/[\w-]{30,}/g, "[redacted]").slice(0, 100);
-  return `${head || error?.name || "unknown"}${error?.code ? ` (${error.code})` : ""}`;
+  const message = String(error?.message ?? "");
+  const label = REASONS.find(([pattern]) => pattern.test(message))?.[1] ?? "other";
+  return /^[A-Z][A-Z0-9_]{2,30}$/.test(error?.code) ? `${label} (${error.code})` : label;
 }
 
 //Checks the ID token that the "Sign in with Google" button hands the browser: signature, expiry, issuer, and that it
