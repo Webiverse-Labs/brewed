@@ -19,6 +19,7 @@ npm run dev            # http://localhost:4000
 | `MONGO_URI` | MongoDB connection string (Atlas `mongodb+srv://…` or local `mongodb://127.0.0.1:27017/brewed`) |
 | `JWT_SECRET` | Long random string used to sign login tokens |
 | `CLIENT_URL` | Frontend origin allowed by CORS, default `http://localhost:5173` |
+| `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM` | Sends verification and password-reset emails through the team Gmail account. Leave empty locally: the email (with its link) is printed in the server log instead |
 | `SEED_PASSWORD` | Password given to every account `npm run seed` creates, including `admin@brewed.app` |
 
 ## Seeding
@@ -38,14 +39,16 @@ src/
 ├── models/            # User, Cafe, Log, Follow, Suggestion, Notification, Upload (image bytes)
 ├── controllers/       # the logic, one file per resource
 ├── routes/            # URL -> controller, wrapped in asyncHandler
-├── middlewares/       # auth (protect / optionalAuth), requireAdmin, uploads (Multer), errors
-└── lib/               # ApiError, JWT cookie, café stats, notifications, query helpers
+├── middlewares/       # auth (protect / requireVerified / optionalAuth), requireAdmin, uploads (Multer), errors
+└── lib/               # ApiError, JWT cookie, email + email tokens, café stats, notifications, query helpers
 scripts/               # smoke tests, and serve-vercel.mjs (runs the Vercel function locally)
 ```
 
 Patterns to follow when adding routes:
 - Wrap handlers in `asyncHandler` and `throw new ApiError(status, "Message")` for expected failures. The error middleware turns every error into `{ message }`.
 - `protect` for logged-in routes, `optionalAuth` for public routes that personalize the result, `protect` + `requireAdmin` for admin routes.
+- `requireVerified` (after `protect`) for actions that need a confirmed email: posting, suggesting, following.
+- Send email with `sendEmail` from `lib/email.js` and `await` it; a Vercel function is frozen once it has responded.
 - Never return a user document to someone else as-is; use `publicUser()` from `lib/userPayload.js`.
 - After creating or deleting a `Log`, call `refreshCafeStats(cafeId)`.
 
@@ -62,13 +65,14 @@ comes from an allowlist, not the uploader's filename, and each file's first byte
 
 ## Smoke tests
 
-`scripts/smoke.mjs` (99 checks) and `scripts/smoke_security.mjs` (7 upload-safety checks) call the running API end to end.
+`scripts/smoke.mjs` (127 checks) and `scripts/smoke_security.mjs` (7 upload-safety checks) call the running API end to end.
 They **write data** (sign up, suspend and delete accounts), so run them only against a freshly seeded throwaway database,
-never the shared Atlas cluster or the test env. CI runs them on every PR.
+never the shared Atlas cluster or the test env. CI runs them on every PR. `smoke.mjs` also needs `MONGO_URI`: emailed tokens are
+stored hashed, so it writes known ones straight into the database.
 
 ```bash
 docker run -d --rm --name brewed-mongo -p 27017:27017 mongo:7   # throwaway DB (mongo:8 won't start on some newer Linux kernels)
 MONGO_URI=mongodb://127.0.0.1:27017/brewed-smoke SEED_PASSWORD=smoke-test-pw npm run seed
 MONGO_URI=mongodb://127.0.0.1:27017/brewed-smoke npm run dev     # in another terminal
-SEED_PASSWORD=smoke-test-pw API_URL=http://localhost:4000 npm run smoke
+MONGO_URI=mongodb://127.0.0.1:27017/brewed-smoke SEED_PASSWORD=smoke-test-pw API_URL=http://localhost:4000 npm run smoke
 ```

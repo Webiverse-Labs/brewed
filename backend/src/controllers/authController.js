@@ -2,6 +2,11 @@ import User from "../models/User.js";
 import { ApiError } from "../lib/ApiError.js";
 import { clearAuthCookie, setAuthCookie } from "../lib/generateToken.js";
 import { mePayload } from "../lib/userPayload.js";
+import { createToken, hashToken } from "../lib/emailTokens.js";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email.js";
+
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const TOKEN_TTL_MS = { verify: 24 * 60 * 60 * 1000, reset: 60 * 60 * 1000 };
 
 //"Ada.Lovelace+x@example.com" -> "ada.lovelacex", then ada.lovelacex2, 3… until it's free
 async function uniqueUsername(email) {
@@ -11,6 +16,25 @@ async function uniqueUsername(email) {
   let candidate = base;
   for (let n = 2; await User.exists({ username: candidate }); n += 1) candidate = `${base}${n}`;
   return candidate;
+}
+
+//Stores a fresh verify/reset token on the matching user and returns { user, raw }, or null when nothing
+//matched or the last email went out under a minute ago. One atomic update, so two quick requests
+//can't both pass the cooldown.
+async function issueToken(kind, filter) {
+  const { raw, hash } = createToken();
+  const now = new Date();
+  const sentAt = `${kind}SentAt`;
+  const user = await User.findOneAndUpdate(
+    { ...filter, $or: [{ [sentAt]: { $exists: false } }, { [sentAt]: { $lt: new Date(now - RESEND_COOLDOWN_MS) } }] },
+    {
+      [`${kind}TokenHash`]: hash,
+      [`${kind}TokenExpires`]: new Date(now.getTime() + TOKEN_TTL_MS[kind]),
+      [sentAt]: now,
+    },
+    { returnDocument: "after" },
+  );
+  return user ? { user, raw } : null;
 }
 
 //shared by user login and admin login; String() stops `{ "$gt": "" }`-style query injection
@@ -33,6 +57,14 @@ export async function signup(req, res) {
     username: await uniqueUsername(String(email)),
   });
 
+  //a failed send must not fail the signup; the banner's Resend button covers it
+  try {
+    const issued = await issueToken("verify", { _id: user._id });
+    await sendVerificationEmail(user, issued.raw);
+  } catch (error) {
+    console.error("Couldn't send the verification email:", error);
+  }
+
   setAuthCookie(res, user._id);
   res.status(201).json({ user: await mePayload(user) });
 }
@@ -54,4 +86,72 @@ export async function logout(req, res) {
 //GET /api/auth/me -> { user } or { user: null } when logged out (no 401, so the app can check quietly on load)
 export async function me(req, res) {
   res.json({ user: req.user ? await mePayload(req.user) : null });
+}
+
+//POST /api/auth/verify-email { token } -> public, so the emailed link also works on a device that isn't logged in
+export async function verifyEmail(req, res) {
+  const token = String(req.body?.token ?? "");
+  const user = token
+    ? await User.findOne({ verifyTokenHash: hashToken(token), verifyTokenExpires: { $gt: new Date() } }).select(
+        "+verifyTokenHash +verifyTokenExpires",
+      )
+    : null;
+  if (!user) throw new ApiError(400, "This verification link is invalid or has expired.");
+
+  user.set({ emailVerified: true, verifyTokenHash: undefined, verifyTokenExpires: undefined });
+  await user.save();
+  res.json({ message: "Email verified." });
+}
+
+//POST /api/auth/resend-verification -> logged-in users only; one email per minute
+export async function resendVerification(req, res) {
+  if (req.user.emailVerified) throw new ApiError(400, "Your email is already verified.");
+
+  const issued = await issueToken("verify", { _id: req.user._id, emailVerified: false });
+  if (!issued) throw new ApiError(429, "We just sent one. Give it a minute before asking for another.");
+
+  try {
+    await sendVerificationEmail(req.user, issued.raw);
+  } catch (error) {
+    console.error("Couldn't send the verification email:", error);
+    throw new ApiError(502, "Couldn't send the email right now. Please try again shortly.");
+  }
+  res.json({ message: `Verification email sent to ${req.user.email}.` });
+}
+
+//POST /api/auth/forgot-password { email } -> always the same answer, so it can't reveal which emails have accounts
+export async function forgotPassword(req, res) {
+  const email = String(req.body?.email ?? "").toLowerCase().trim();
+  if (!email) throw new ApiError(400, "Enter your email address.");
+
+  const issued = await issueToken("reset", { email, status: "active" });
+  if (issued) {
+    try {
+      await sendPasswordResetEmail(issued.user, issued.raw);
+    } catch (error) {
+      console.error("Couldn't send the password reset email:", error);
+    }
+  }
+  res.json({ message: "If an account exists for that email, we've sent a link to reset the password." });
+}
+
+//POST /api/auth/reset-password { token, password } -> sets the password and logs the user in
+export async function resetPassword(req, res) {
+  const { token, password } = req.body ?? {};
+  if (!password) throw new ApiError(400, "Enter a new password.");
+
+  const user = token
+    ? await User.findOne({ resetTokenHash: hashToken(token), resetTokenExpires: { $gt: new Date() } }).select(
+        "+password +resetTokenHash +resetTokenExpires",
+      )
+    : null;
+  if (!user) throw new ApiError(400, "This reset link is invalid or has expired.");
+  if (user.status === "suspended") throw new ApiError(403, "This account has been suspended.");
+
+  //following the emailed link proves they own the inbox, so the address counts as verified too
+  user.set({ password: String(password), emailVerified: true, resetTokenHash: undefined, resetTokenExpires: undefined });
+  await user.save(); //minlength is checked before hashing, and a bad password leaves the link usable
+
+  setAuthCookie(res, user._id);
+  res.json({ user: await mePayload(user) });
 }

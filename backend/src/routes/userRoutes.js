@@ -13,7 +13,7 @@ import {
   updateMe,
 } from "../controllers/userController.js";
 import { asyncHandler } from "../middlewares/asyncHandlerMiddleware.js";
-import { optionalAuth, protect } from "../middlewares/authMiddleware.js";
+import { optionalAuth, protect, requireVerified } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
@@ -30,7 +30,7 @@ router.get("/:username/visited", optionalAuth, asyncHandler(getVisited));
 router.get("/:username/favorites", optionalAuth, asyncHandler(getFavorites));
 router.get("/:username/logs", optionalAuth, asyncHandler(getUserLogs));
 
-router.post("/:id/follow", protect, asyncHandler(follow));
+router.post("/:id/follow", protect, requireVerified, asyncHandler(follow));
 router.delete("/:id/follow", protect, asyncHandler(unfollow));
 
 export default router;

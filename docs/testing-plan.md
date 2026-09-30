@@ -34,7 +34,7 @@ File each failure as its own bug (see [Reporting bugs](#reporting-bugs)) and lin
 
 | Area | Scenarios | Tester (fill in per round) |
 |---|---|---|
-| Auth | A1–A8 | |
+| Auth | A1–A14 | |
 | Home, Explore, café page | H1–H5, C1–C4 | |
 | Log a Visit, Suggest a Café | L1–L5, G1–G2 | |
 | Profile, notifications, settings | P1–P3, N1–N2, S1–S4 | |
@@ -74,6 +74,12 @@ Each line is: what to do → what should happen. The IDs go in bug reports.
 - [ ] **A6** Profile menu → Log Out → back at login. Browser back button doesn't show your private pages
 - [ ] **A7** Log in, close the browser, reopen the URL → still logged in
 - [ ] **A8** After an admin suspends your own test account (AD5) → login shows "This account has been suspended."
+- [ ] **A9** Sign up with a real inbox → a banner says to verify, and the "Verify your email" email arrives (check spam). Its button opens a page that says "Email verified", and the banner is gone after Continue
+- [ ] **A10** While unverified, try to publish a log, suggest a café and follow someone → each is refused with "Verify your email to do this." Favoriting and editing your profile still work. After verifying, all three work
+- [ ] **A11** Click Resend email twice quickly → the first sends a new email, the second says to wait a minute. Only the newest link needs to work
+- [ ] **A12** Open the verification link a second time → still a friendly page (not an error) when you're logged in. Open a mangled link (delete a few characters) → "Link didn't work"
+- [ ] **A13** Log in page → Reset it → enter your email → "If an account exists…" (same message for an email that has no account). The reset email arrives, its link opens a form, and saving a new password logs you in
+- [ ] **A14** Use the same reset link again → "Link didn't work" with a Get a New Link button. The old password no longer works, the new one does
 
 ### Home, Explore, café page
 - [ ] **H1** Home shows the Popular, Featured, top-rated, and newest café rows. Each café opens its page
@@ -164,7 +170,7 @@ A fix PR says `Fixes #<issue>`. After it deploys, **the reporter** re-tests and 
 ## Known gaps
 
 - **Image URLs are unguessable but not private.** A diary photo is hidden in the app, but anyone who has its `/uploads/…` link can open it.
-- **No login rate limiting**, and "Forgot your password?" is a "coming soon" toast.
+- **No login rate limiting.** Resetting a password doesn't log out other devices that are already signed in (login tokens are stateless).
 - **Café deletion doesn't exist.** Admins disable cafés instead.
 - Undecided in the design: the Settings "Support" and "Danger Zone" sections, the coffee-bean artwork and café photo, and the final fonts.
   Don't file these as bugs.

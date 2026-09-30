@@ -145,8 +145,8 @@ async function seed() {
 
   //users one by one so the pre-save hook hashes each password
   const u = {};
-  for (const [key, data] of Object.entries(users)) u[key] = await User.create({ ...data, password });
-  await User.create({ name: "Administrator", username: "admin", email: "admin@brewed.app", password, role: "admin" });
+  for (const [key, data] of Object.entries(users)) u[key] = await User.create({ ...data, password, emailVerified: true });
+  await User.create({ name: "Administrator", username: "admin", email: "admin@brewed.app", password, role: "admin", emailVerified: true });
 
   const c = {};
   for (const [key, data] of Object.entries(cafes)) c[key] = await Cafe.create(data);

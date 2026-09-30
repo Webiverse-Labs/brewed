@@ -1,6 +1,11 @@
 // API smoke test. WRITES DATA (creates/suspends/deletes users, adds cafés): run it only against a freshly
 // seeded throwaway database, never a shared one. Needs `npm run seed` first and the API running.
-// Usage (from backend/): SEED_PASSWORD=... API_URL=http://localhost:4000 node scripts/smoke.mjs
+// Usage (from backend/): MONGO_URI=<the API's database> SEED_PASSWORD=... API_URL=http://localhost:4000 node scripts/smoke.mjs
+// MONGO_URI is also needed here: the emailed verify/reset tokens are hashed, so the script writes known ones directly.
+import mongoose from "mongoose";
+import User from "../src/models/User.js";
+import { createToken } from "../src/lib/emailTokens.js";
+
 const BASE = process.env.API_URL || "http://localhost:4000";
 const PW = process.env.SEED_PASSWORD;
 let pass = 0, fail = 0;
@@ -55,6 +60,7 @@ check("me logged out -> { user: null }", r.status === 200 && r.body.user === nul
 r = await newbie("POST", "/api/auth/signup", { name: "Ada Lovelace", email: newEmail, password: "short" });
 check("signup short password -> 400", r.status === 400 && /8 characters/.test(r.body.message), JSON.stringify(r));
 r = await newbie("POST", "/api/auth/signup", { name: "Ada Lovelace", email: newEmail, password: PW });
+const r0 = r;
 check("signup -> 201 + user", r.status === 201 && r.body.user?.email === newEmail && !("password" in r.body.user), JSON.stringify(r));
 check("signup derives username", /^ada\./.test(r.body.user?.username ?? ""), r.body.user?.username);
 const newbieId = r.body.user?.id;
@@ -69,6 +75,78 @@ check("login (case-insensitive email) -> 200", r.status === 200 && r.body.user?.
 r = await margot("GET", "/api/auth/me");
 check("me has unreadNotifications = 2", r.body.user?.unreadNotifications === 2, JSON.stringify(r.body));
 check("me has favorites (2)", r.body.user?.favorites?.length === 2, JSON.stringify(r.body.user?.favorites));
+
+// --- email verification + password reset
+await mongoose.connect(process.env.MONGO_URI);
+const plantToken = async (id, kind) => {
+  const { raw, hash } = createToken();
+  await User.updateOne({ _id: id }, { [`${kind}TokenHash`]: hash, [`${kind}TokenExpires`]: new Date(Date.now() + 3600e3) });
+  return raw;
+};
+check("signup -> emailVerified false", r0.body.user?.emailVerified === false, JSON.stringify(r0.body.user));
+check("toJSON hides token fields", !Object.keys(r0.body.user ?? {}).some((k) => /TokenHash|TokenExpires|SentAt/.test(k)), JSON.stringify(r0.body.user));
+r = await newbie("GET", "/api/auth/me");
+check("me exposes emailVerified", r.body.user?.emailVerified === false, JSON.stringify(r.body));
+const unverifiedLog = new FormData(); unverifiedLog.set("cafeId", "zzz"); unverifiedLog.set("rating", "4");
+r = await newbie("POST", "/api/logs", undefined, { form: unverifiedLog });
+check("unverified: post log -> 403", r.status === 403 && /Verify your email/.test(r.body.message), JSON.stringify(r));
+r = await newbie("POST", "/api/suggestions", undefined, { form: new FormData() });
+check("unverified: suggest café -> 403", r.status === 403, JSON.stringify(r));
+r = await newbie("POST", `/api/users/${newbieId}/follow`);
+check("unverified: follow -> 403", r.status === 403, JSON.stringify(r));
+r = await newbie("POST", "/api/cafes/zzz/favorite");
+check("unverified: favorites stay open (not 403)", r.status !== 403, JSON.stringify(r));
+r = await anon("POST", "/api/auth/verify-email", { token: "bogus" });
+check("verify with bogus token -> 400", r.status === 400, JSON.stringify(r));
+r = await anon("POST", "/api/auth/verify-email", {});
+check("verify with no token -> 400", r.status === 400, JSON.stringify(r));
+r = await anon("POST", "/api/auth/resend-verification");
+check("resend logged out -> 401", r.status === 401, JSON.stringify(r));
+r = await newbie("POST", "/api/auth/resend-verification");
+check("resend right after signup -> 429 (cooldown)", r.status === 429, JSON.stringify(r));
+await User.updateOne({ _id: newbieId }, { verifySentAt: new Date(Date.now() - 120e3) });
+r = await newbie("POST", "/api/auth/resend-verification");
+check("resend after cooldown -> 200", r.status === 200, JSON.stringify(r));
+r = await newbie("POST", "/api/auth/resend-verification");
+check("immediate second resend -> 429", r.status === 429, JSON.stringify(r));
+const verifyToken = await plantToken(newbieId, "verify");
+r = await anon("POST", "/api/auth/verify-email", { token: verifyToken });
+check("verify with real token -> 200", r.status === 200, JSON.stringify(r));
+r = await anon("POST", "/api/auth/verify-email", { token: verifyToken });
+check("verify token is single-use -> 400", r.status === 400, JSON.stringify(r));
+r = await newbie("GET", "/api/auth/me");
+check("me: emailVerified true after verifying", r.body.user?.emailVerified === true, JSON.stringify(r.body));
+r = await newbie("POST", "/api/auth/resend-verification");
+check("resend when verified -> 400", r.status === 400, JSON.stringify(r));
+await User.updateOne({ _id: newbieId }, { verifyTokenHash: createToken().hash, verifyTokenExpires: new Date(Date.now() - 1000) });
+r = await anon("POST", "/api/auth/verify-email", { token: "x" });
+check("verify with expired token -> 400", r.status === 400, JSON.stringify(r));
+
+r = await anon("POST", "/api/auth/forgot-password", { email: `nobody.${stamp}@example.com` });
+const unknownMessage = r.body.message;
+check("forgot-password unknown email -> 200", r.status === 200 && unknownMessage, JSON.stringify(r));
+r = await anon("POST", "/api/auth/forgot-password", { email: newEmail.toUpperCase() });
+check("forgot-password known email -> same 200 message", r.status === 200 && r.body.message === unknownMessage, JSON.stringify(r));
+r = await anon("POST", "/api/auth/forgot-password", {});
+check("forgot-password without email -> 400", r.status === 400, JSON.stringify(r));
+r = await anon("POST", "/api/auth/reset-password", { token: "bogus", password: "brand-new-pass1" });
+check("reset with bogus token -> 400", r.status === 400, JSON.stringify(r));
+const resetToken = await plantToken(newbieId, "reset");
+r = await anon("POST", "/api/auth/reset-password", { token: resetToken, password: "short" });
+check("reset with short password -> 400", r.status === 400 && /8 characters/.test(r.body.message), JSON.stringify(r));
+const resetter = client();
+r = await resetter("POST", "/api/auth/reset-password", { token: resetToken, password: "brand-new-pass1" });
+check("reset (link still valid after the bad password) -> 200 + user", r.status === 200 && r.body.user?.email === newEmail && r.body.user?.emailVerified === true, JSON.stringify(r));
+r = await resetter("GET", "/api/auth/me");
+check("reset logs the user in", r.body.user?.email === newEmail, JSON.stringify(r.body));
+r = await anon("POST", "/api/auth/reset-password", { token: resetToken, password: "another-pass-2" });
+check("reset token is single-use -> 400", r.status === 400, JSON.stringify(r));
+r = await client()("POST", "/api/auth/login", { email: newEmail, password: PW });
+check("old password no longer works -> 401", r.status === 401, JSON.stringify(r));
+r = await newbie("POST", "/api/auth/login", { email: newEmail, password: "brand-new-pass1" });
+check("login with the new password -> 200", r.status === 200, JSON.stringify(r));
+//the rest of the script logs newbie in with PW again, so put it back
+await newbie("PATCH", "/api/users/me/password", { current: "brand-new-pass1", next: PW });
 
 // --- cafés
 r = await anon("GET", "/api/cafes");

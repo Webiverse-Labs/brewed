@@ -33,6 +33,15 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["user", "admin"], default: "user" },
     status: { type: String, enum: ["active", "suspended"], default: "active" },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Cafe" }],
+    //unverified users can browse but not post, suggest or follow (requireVerified)
+    emailVerified: { type: Boolean, default: false },
+    //only the SHA-256 of each emailed token is stored (see lib/emailTokens.js); *SentAt drives the resend cooldown
+    verifyTokenHash: { type: String, select: false },
+    verifyTokenExpires: { type: Date, select: false },
+    verifySentAt: { type: Date, select: false },
+    resetTokenHash: { type: String, select: false },
+    resetTokenExpires: { type: Date, select: false },
+    resetSentAt: { type: Date, select: false },
   },
   { timestamps: true },
 );

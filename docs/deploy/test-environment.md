@@ -27,7 +27,7 @@ The frontend and the API share **one domain**, which removes most deploy problem
 | Problem | How this setup handles it |
 |---|---|
 | The auth cookie is `sameSite: "lax"`, so an API on another site never receives it and login silently fails | Same domain, so the cookie is always sent. `api/index.js` runs in production mode, so the cookie is also `secure` |
-| CORS allows exactly one origin (`CLIENT_URL`) | Same-origin requests don't use CORS, so `CLIENT_URL` doesn't need to be set |
+| CORS allows exactly one origin (`CLIENT_URL`) | Same-origin requests don't use CORS. `CLIENT_URL` is still needed for the links in emails (see step 3) |
 | `VITE_API_URL` is baked in at build time | Production builds call their own domain by default (`frontend/src/lib/api.js`), so there's nothing to set |
 | A refresh on a deep link 404s on static hosts | `vercel.json` sends every unknown path to `index.html` |
 | A Vercel function has no lasting disk, so disk uploads would vanish | Images are stored in MongoDB (`backend/src/models/Upload.js`) |
@@ -64,6 +64,13 @@ Ren does steps 1–5. Wion (org owner) may need to approve one GitHub request in
      |---|---|
      | `MONGO_URI` | The connection string from step 1 |
      | `JWT_SECRET` | Output of `openssl rand -hex 32` (any long random string) |
+     | `CLIENT_URL` | The site's public URL, e.g. `https://brewed-jade.vercel.app`. Builds the links in verification and reset emails (never taken from request headers) |
+     | `GMAIL_USER` | The team Gmail address that sends the emails |
+     | `GMAIL_APP_PASSWORD` | A Google *app password* for that account (Google Account → Security → 2-Step Verification → App passwords). Not the login password |
+     | `EMAIL_FROM` | Optional sender name, e.g. `Brewed <team@gmail.com>`. Defaults to `GMAIL_USER` |
+
+     Without the `GMAIL_*` values the API refuses to send email in production, so signup still works but the verification email doesn't go out.
+     Gmail allows about 500 messages a day, plenty for a test env.
 
    - Click *Deploy*.
 4. **Production branch.** Vercel treats `main` as production, but the backend isn't merged yet. Until PR #1, `backend/api` and
@@ -131,11 +138,12 @@ Don't run `npm run smoke` against the test env. It signs up, suspends, and delet
 - **4.5 MB per request.** Photos are shrunk first, but a big GIF isn't (shrinking would drop the animation). Too-large uploads show "Those photos are too big to send together".
 - **Images count against Atlas Free's 0.5 GB.** Atlas Free also has no backups, allows 100 operations per second, and pauses after 30 days without connections.
 - **Vercel Hobby is for non-commercial use only.** A school project qualifies.
-- "Forgot your password?" only shows a "coming soon" toast. If a tester forgets the password, share it again.
+- **Accounts that existed before email verification** must be marked verified once, or they can't post. Before merging that change, run
+  `node --env-file=.env.test scripts/mark-existing-verified.mjs` from `backend/` (safe to repeat).
 
 ## Before real users (not needed now)
 
-Move images to object storage (Vercel Blob, Cloudinary, or S3) with direct browser uploads. Add rate limiting on `/api/auth/*`.
+Move images to object storage (Vercel Blob, Cloudinary, or S3) with direct browser uploads. Add rate limiting on `/api/auth/*`. Email sent through a personal Gmail account can land in spam and is capped per day, so switch to a transactional provider (Brevo, Resend, Postmark) with a verified domain.
 Set up a separate production database with backups, a custom domain, and error monitoring.
 
 ---

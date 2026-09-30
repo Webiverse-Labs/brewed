@@ -17,6 +17,8 @@ API responses use `id` (never `_id`) and never include `__v` or the password has
 | `role` | `user` \| `admin` | Admin login |
 | `status` | `active` \| `suspended` | Admin Users "Suspend" |
 | `favorites` | [Cafe] | Bookmark button, Profile "Favorites" tab |
+| `emailVerified` *(added)* | Boolean, default `false` | Verify-email banner. Unverified users can't post logs, suggest cafés or follow |
+| `verifyToken*`, `resetToken*` *(added)* | SHA-256 hash, expiry and last-sent time of the emailed links; never selected, never in a response | Verification and password reset emails |
 | `createdAt` | Date | Admin Users "Joined" |
 
 ### `Follow`
@@ -61,23 +63,27 @@ They are created by: a new follow (`follow`), an admin changing the opening hour
 Base URL: `http://localhost:4000/api`. Auth is a JWT in an httpOnly `token` cookie. The frontend sends it with `withCredentials: true`.
 Errors are always `{ message }` with the right status: 400 bad input, 401 not logged in, 403 not allowed or suspended, 404, 409 conflict.
 
-🔓 public · 🔑 logged in · 🛡️ admin. "optional" means it works either way but personalizes the result when logged in.
+🔓 public · 🔑 logged in · ✉️ also needs a verified email (403 "Verify your email to do this.") · 🛡️ admin. "optional" means it works either way but personalizes the result when logged in.
 
 | Method & path | Who | Notes |
 |---|---|---|
 | `POST /auth/signup` `{ name, email, password }` | 🔓 | Sets the cookie → `{ user }` |
 | `POST /auth/login` `{ email, password }` | 🔓 | 401 for wrong credentials, 403 if suspended |
 | `POST /auth/logout` | 🔓 | Clears the cookie |
+| `POST /auth/verify-email` `{ token }` | 🔓 | Marks the email verified. 400 for a wrong, used or expired (24 h) token |
+| `POST /auth/resend-verification` | 🔑 | One email per minute (429 after that). 400 if already verified |
+| `POST /auth/forgot-password` `{ email }` | 🔓 | Always 200 with the same message, so it doesn't reveal which emails have accounts. Link lasts 1 h |
+| `POST /auth/reset-password` `{ token, password }` | 🔓 | Sets the password, marks the email verified, logs the user in → `{ user }`. 400 for a bad token or short password |
 | `GET /auth/me` | optional | `{ user }` including `favorites` and `unreadNotifications`, or `{ user: null }` |
 | `GET /cafes?q=&sort=popular\|rating\|new&featured=true&limit=` | 🔓 | Active cafés only. `q` matches name, area and tags |
 | `GET /cafes/:id` | optional | Adds `ratingCounts {5..1}` and `isFavorite` |
 | `GET /cafes/:id/logs` | 🔓 | Public reviews only. Anonymous ones have `user: null` |
 | `POST` / `DELETE /cafes/:id/favorite` | 🔑 | → `{ favorites }` |
-| `POST /logs` (multipart) | 🔑 | `type, cafeId, visitedAt, rating, text, anonymous, items` (a JSON string) + `photos[]` |
+| `POST /logs` (multipart) | 🔑 ✉️ | `type, cafeId, visitedAt, rating, text, anonymous, items` (a JSON string) + `photos[]` |
 | `GET /users?q=` | optional | Coffee Drinkers search, adds `isFollowing` |
 | `GET /users/:username` | optional | Profile header: `visits`, `avgRating`, `isFollowing`, `isMe` |
 | `GET /users/:username/visited` · `/favorites` · `/logs` | optional | Diary entries and anonymous reviews are only included for the owner |
-| `POST` / `DELETE /users/:id/follow` | 🔑 | → `{ isFollowing }` |
+| `POST` / `DELETE /users/:id/follow` | 🔑 (`POST` also ✉️) | → `{ isFollowing }` |
 | `PATCH /users/me` `{ name?, username?, bio? }` | 🔑 | → `{ user }` |
 | `POST /users/me/avatar` (multipart `avatar`) | 🔑 | → `{ user }` |
 | `PATCH /users/me/password` `{ current, next }` | 🔑 | |

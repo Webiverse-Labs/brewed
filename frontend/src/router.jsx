@@ -6,6 +6,9 @@ import AdminLayout from "./components/layout/AdminLayout.jsx";
 import GuestOnly from "./components/layout/GuestOnly.jsx";
 import RequireAuth from "./components/layout/RequireAuth.jsx";
 import AuthPage from "./pages/auth/AuthPage.jsx";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage.jsx";
+import VerifyEmailPage from "./pages/auth/VerifyEmailPage.jsx";
 import HomePage from "./pages/user/HomePage.jsx";
 import CafeProfilePage from "./pages/user/CafeProfilePage.jsx";
 import LogVisitPage from "./pages/user/LogVisitPage.jsx";
@@ -41,7 +44,16 @@ export const router = createBrowserRouter([
         children: [
           { path: "/signup", element: <AuthPage /> },
           { path: "/login", element: <AuthPage /> },
+          { path: "/forgot-password", element: <ForgotPasswordPage /> },
           { path: "/admin/login", element: <AdminLoginPage /> },
+        ],
+      },
+      {
+        // same card as the auth pages, but no GuestOnly: emailed links must work for someone who's already logged in
+        element: <AuthLayout />,
+        children: [
+          { path: "/verify-email", element: <VerifyEmailPage /> },
+          { path: "/reset-password", element: <ResetPasswordPage /> },
         ],
       },
       {

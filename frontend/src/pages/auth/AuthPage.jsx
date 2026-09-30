@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import SegmentedControl from "../../components/ui/SegmentedControl.jsx";
 import Field from "../../components/ui/Field.jsx";
@@ -76,13 +76,9 @@ function AuthPage() {
         {!isSignup && (
           <p className="text-center text-sm text-secondary">
             Forgot your password?{" "}
-            <button
-              type="button"
-              onClick={() => toast("Password reset is coming soon.")}
-              className="font-medium text-accent hover:underline"
-            >
+            <Link to="/forgot-password" className="font-medium text-accent hover:underline">
               Reset it
-            </button>
+            </Link>
           </p>
         )}
       </form>
