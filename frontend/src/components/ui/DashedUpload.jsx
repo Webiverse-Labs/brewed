@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { dashedClass } from "./inputStyles.js";
 import { cn } from "../../lib/cn.js";
+import { shrinkImage } from "../../lib/shrinkImage.js";
 
 // File picker styled as a dashed box with previews. The input is cleared after each pick (so the
 // same file can be re-added), which means a surrounding <form> can't read the files: the parent
@@ -22,9 +23,11 @@ function DashedUpload({ icon: Icon, label, multiple = false, max = 6, onChange, 
     onChange?.(next.map((f) => f.file));
   };
 
-  const handleChange = (e) => {
-    const picked = Array.from(e.target.files ?? []).map((file) => ({ file, url: URL.createObjectURL(file) }));
+  const handleChange = async (e) => {
+    const chosen = Array.from(e.target.files ?? []);
     e.target.value = "";
+    //big photos are shrunk here, so the previews and the upload use the smaller file
+    const picked = (await Promise.all(chosen.map(shrinkImage))).map((file) => ({ file, url: URL.createObjectURL(file) }));
     if (!multiple) files.forEach((f) => URL.revokeObjectURL(f.url));
     const next = multiple ? [...files, ...picked] : picked;
     next.slice(max).forEach((f) => URL.revokeObjectURL(f.url));
