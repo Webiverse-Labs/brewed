@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "../../lib/cn.js";
 
@@ -12,6 +12,7 @@ const widths = {
 // Children only mount while open, so forms inside reset every time the modal opens.
 function Modal({ open, onClose, title, size = "md", children }) {
   const ref = useRef(null);
+  const titleId = useId(); //gives the dialog an accessible name: screen readers announce the title on open
 
   useEffect(() => {
     const dialog = ref.current;
@@ -21,7 +22,12 @@ function Modal({ open, onClose, title, size = "md", children }) {
   }, [open]);
 
   return (
-    <dialog ref={ref} className="modal modal-bottom outline-none sm:modal-middle" onClose={onClose}>
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      className="modal modal-bottom outline-none sm:modal-middle"
+      onClose={onClose}
+    >
       <div
         className={cn(
           "modal-box max-h-[90vh] rounded-t-3xl bg-base-100 p-6 shadow-float outline-none sm:rounded-3xl",
@@ -29,7 +35,9 @@ function Modal({ open, onClose, title, size = "md", children }) {
         )}
       >
         <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="font-display text-xl font-semibold">{title}</h2>
+          <h2 id={titleId} className="font-display text-xl font-semibold">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}

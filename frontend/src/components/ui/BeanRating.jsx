@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import CoffeeBean from "./CoffeeBean.jsx";
 import { cn } from "../../lib/cn.js";
 
 // Read-only by default; passing `onChange` turns it into a 1–5 input.
 function BeanRating({ value = 0, onChange, size = 14, className, label = "Rating" }) {
   const [hover, setHover] = useState(0);
-  const shown = Math.round(hover || value);
+  const buttons = useRef([]);
+  //only whole beans fill: an average of 4.5 shows 4 filled and an outline (docs/ui/components.md)
+  const shown = Math.floor(hover || value);
 
   if (!onChange) {
     return (
@@ -17,9 +19,15 @@ function BeanRating({ value = 0, onChange, size = 14, className, label = "Rating
     );
   }
 
+  //ARIA radio group: Right/Down pick the next bean, Left/Up the previous, wrapping around,
+  //and focus moves with the selection so Space re-selects the bean that has focus
   const handleKey = (e) => {
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") onChange(Math.min(5, value + 1));
-    if (e.key === "ArrowLeft" || e.key === "ArrowDown") onChange(Math.max(1, value - 1));
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const next = value ? ((value - 1 + step + 5) % 5) + 1 : step > 0 ? 1 : 5;
+    onChange(next);
+    buttons.current[next - 1]?.focus();
   };
 
   return (
@@ -33,6 +41,7 @@ function BeanRating({ value = 0, onChange, size = 14, className, label = "Rating
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
+          ref={(el) => (buttons.current[n - 1] = el)}
           type="button"
           role="radio"
           aria-checked={value === n}

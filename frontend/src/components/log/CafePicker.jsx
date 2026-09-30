@@ -38,7 +38,13 @@ function CafePicker({ value: selected, onChange }) {
   };
 
   return (
-    <div className="relative">
+    //close only when focus leaves the whole picker, so Tab can move from the input into the results
+    <div
+      className="relative"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+      }}
+    >
       <TextInput
         look="outlined"
         icon={Search}
@@ -54,7 +60,6 @@ function CafePicker({ value: selected, onChange }) {
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
       />
       {open && (
         <ul
@@ -70,7 +75,7 @@ function CafePicker({ value: selected, onChange }) {
             <li key={cafe.id} role="option" aria-selected="false">
               <button
                 type="button"
-                // Keep focus in the input so onBlur doesn't close the list before the click lands.
+                // Keep focus in the input on click (Safari doesn't focus buttons, so the list would close first).
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pick(cafe)}
                 className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-base-200"
