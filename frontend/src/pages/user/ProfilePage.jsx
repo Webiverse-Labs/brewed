@@ -116,7 +116,7 @@ function ProfilePage() {
         value={tab}
         onChange={(t) => setParams({ tab: t }, { replace: true })}
         label="Profile sections"
-        className="mt-8 mb-5"
+        className="mx-auto mt-8 mb-5 w-fit max-w-full"
       />
 
       {/* key: each tab (and profile) gets a fresh loader; reusing one showed the last tab's data as this tab's and crashed */}
