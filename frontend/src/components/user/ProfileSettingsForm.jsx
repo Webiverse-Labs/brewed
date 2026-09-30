@@ -7,6 +7,7 @@ import TextArea from "../ui/TextArea.jsx";
 import SectionLabel from "../ui/SectionLabel.jsx";
 import Button from "../ui/Button.jsx";
 import api, { errorMessage } from "../../lib/api.js";
+import { shrinkImage } from "../../lib/shrinkImage.js";
 import { useAuth } from "../../hooks/useAuth.js";
 
 function ProfileSettingsForm() {
@@ -19,10 +20,10 @@ function ProfileSettingsForm() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    const form = new FormData();
-    form.set("avatar", file);
     setUploading(true);
     try {
+      const form = new FormData();
+      form.set("avatar", await shrinkImage(file));
       const { data } = await api.post("/users/me/avatar", form);
       setUser(data.user);
       toast.success("Avatar updated.");

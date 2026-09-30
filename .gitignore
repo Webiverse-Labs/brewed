@@ -5,10 +5,10 @@ jspm_packages/
 # User-uploaded files (Multer disk storage)
 backend/uploads/
 
-# Secrets and Environment Variables
+# Secrets and Environment Variables (.env.test holds the test deploy's Atlas URI for seeding)
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # Logs
 logs
@@ -36,3 +36,6 @@ out/
 # Operating System Files
 .DS_Store
 Thumbs.db
+
+# Vercel CLI project link (created by `vercel link`)
+.vercel

@@ -1,0 +1,7 @@
+# Only matters for `vercel` CLI deploys (Git deploys use the repo, which already excludes these).
+# The CLI does not read .gitignore, and its defaults skip .env.local but not .env or .env.test.
+.env
+.env.*
+!.env.example
+node_modules
+backend/uploads

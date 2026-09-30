@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import UserNavbar from "./UserNavbar.jsx";
 import MobileTabBar from "./MobileTabBar.jsx";
 import SearchOverlay from "../cafe/SearchOverlay.jsx";
@@ -12,6 +12,15 @@ import { useAuth } from "../../hooks/useAuth.js";
 function UserLayout() {
   const [exploreOpen, setExploreOpen] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
+
+  // any navigation (navbar link, back/forward) closes Explore. Reset during render, not in an effect,
+  // so the new page never paints with the panel still on top
+  const { key: locationKey } = useLocation();
+  const [prevLocationKey, setPrevLocationKey] = useState(locationKey);
+  if (locationKey !== prevLocationKey) {
+    setPrevLocationKey(locationKey);
+    setExploreOpen(false);
+  }
 
   const toggleExplore = useCallback(() => setExploreOpen((o) => !o), []);
   const openExplore = useCallback(() => setExploreOpen(true), []);

@@ -1,0 +1,67 @@
+name: Test environment bug
+description: Something broken or wrong on the brewed-test deploy (see docs/testing-plan.md)
+title: "[test] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One bug per issue. Search open issues first. **Never paste passwords** — this repo is public.
+  - type: input
+    id: scenario
+    attributes:
+      label: Scenario ID
+      description: From docs/testing-plan.md (e.g. L3), or "exploratory"
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Page URL
+      placeholder: https://<project>.vercel.app/cafes/…
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Blocker — can't continue, data lost, or security problem
+        - Major — a feature is wrong or broken, but there's a workaround
+        - Minor — works, but awkward or inconsistent
+        - Cosmetic — visual only (spacing, typo, doesn't match Figma)
+    validations:
+      required: true
+  - type: input
+    id: account
+    attributes:
+      label: Account used
+      description: Email of the seeded account, or "my own signup"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Log in as margotbrews@example.com
+        2. Open Log a Visit, choose Personal Diary
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: Expected vs. actual
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: iPhone 13, Safari 19 / Windows, Chrome 141
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshot or screen recording
+      description: Drag files here. For errors, add what the browser console shows (F12 → Console).
