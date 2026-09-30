@@ -9,7 +9,13 @@ function loadGoogle() {
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
-    script.onload = () => resolve(window.google);
+    script.onload = () => {
+      // a blocker or a partial load can leave the global missing: fail (and allow a retry) instead of caching a dud
+      if (window.google?.accounts?.id) return resolve(window.google);
+      scriptPromise = undefined;
+      script.remove();
+      reject(new Error("Google sign-in didn't initialize."));
+    };
     script.onerror = () => {
       scriptPromise = undefined;
       script.remove();

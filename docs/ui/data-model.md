@@ -71,7 +71,7 @@ Errors are always `{ message }` with the right status: 400 bad input, 401 not lo
 |---|---|---|
 | `POST /auth/signup` `{ name, email, password }` | 🔓 | Sets the cookie → `{ user }` |
 | `POST /auth/login` `{ email, password }` | 🔓 | 401 for wrong credentials, 403 if suspended |
-| `POST /auth/google` `{ credential }` | 🔓 | The ID token from Google's button. Logs in, links to the account with that email, or creates one → `{ user, isNew }`. 401 for a bad or unverified token, 403 for admins and suspended accounts, 503 if `GOOGLE_CLIENT_ID` is unset |
+| `POST /auth/google` `{ credential }` | 🔓 | The ID token from Google's button. Logs in, links to the account with that email, or creates one → `{ user, isNew }`. 401 for a bad or unverified token, 403 for admins and suspended accounts, 409 if the email is already linked to a different Google account, 503 if `GOOGLE_CLIENT_ID` is unset |
 | `POST /auth/logout` | 🔓 | Clears the cookie |
 | `POST /auth/verify-email` `{ token }` | 🔓 | Marks the email verified. 400 for a wrong or expired (24 h) token. Opening the same link again is harmless |
 | `POST /auth/resend-verification` | 🔑 | One email per minute (429 after that). 400 if already verified |
