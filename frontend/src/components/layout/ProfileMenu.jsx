@@ -13,8 +13,7 @@ function ProfileMenu({ active }) {
 
   const handleLogout = async () => {
     closeMenu();
-    await logout();
-    navigate("/login");
+    if (await logout()) navigate("/login");
   };
 
   return (

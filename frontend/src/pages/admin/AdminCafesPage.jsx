@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Ban, ImagePlus, Pencil, Plus, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import AdminHeader from "../../components/admin/AdminHeader.jsx";
@@ -31,9 +31,14 @@ function AdminCafesPage() {
   const rows = data?.cafes ?? [];
   const isNew = editing === "new";
 
-  const replaceRow = (cafe) => setData((d) => ({ ...d, cafes: d.cafes.map((c) => (c.id === cafe.id ? cafe : c)) }));
+  //d is null if a search failed while this request was in flight; the error view (with Retry) is showing then
+  const replaceRow = (cafe) =>
+    setData((d) => d && { ...d, cafes: d.cafes.map((c) => (c.id === cafe.id ? cafe : c)) });
 
+  //bumps on every open, so a slow save can't close an editor that was opened after it started
+  const editorSession = useRef(0);
   const openEditor = (target) => {
+    editorSession.current += 1;
     setPhotos([]);
     setEditing(target);
   };
@@ -55,6 +60,7 @@ function AdminCafesPage() {
     form.set("featured", String(form.has("featured")));
     photos.forEach((photo) => form.append("photos", photo));
 
+    const session = editorSession.current;
     setSaving(true);
     try {
       if (isNew) {
@@ -66,7 +72,7 @@ function AdminCafesPage() {
         replaceRow(res.cafe);
         toast.success("Changes saved.");
       }
-      setEditing(null);
+      if (editorSession.current === session) setEditing(null);
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {

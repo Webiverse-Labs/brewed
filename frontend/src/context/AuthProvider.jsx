@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import api from "../lib/api.js";
+import toast from "react-hot-toast";
+import api, { errorMessage } from "../lib/api.js";
 import { AuthContext } from "./authContext.js";
 
 // Holds the logged-in user (from the `token` cookie). `user` is undefined while the first /auth/me check runs,
@@ -46,9 +47,17 @@ function AuthProvider({ children }) {
         setUser(data.user);
         return data.user;
       },
+      //only the server can clear the httpOnly cookie, so stay logged in if it didn't answer.
+      //Resolves to false (after telling the user) so callers know not to navigate away.
       logout: async () => {
-        await api.post("/auth/logout").catch(() => {});
+        try {
+          await api.post("/auth/logout");
+        } catch (err) {
+          toast.error(errorMessage(err, "Couldn't log out. Check your connection and try again."));
+          return false;
+        }
         setUser(null);
+        return true;
       },
     }),
     [user, refresh],

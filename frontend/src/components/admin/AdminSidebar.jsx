@@ -24,8 +24,7 @@ function AdminSidebar({ onNavigate }) {
   const navigate = useNavigate();
 
   const signOut = async () => {
-    await logout();
-    navigate("/admin/login");
+    if (await logout()) navigate("/admin/login");
   };
 
   return (
