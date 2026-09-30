@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
 import { Search, X } from "lucide-react";
 import CompactCafeRow from "./CompactCafeRow.jsx";
-import SearchUserRow from "./SearchUserRow.jsx";
 import BookmarkBtn from "../ui/BookmarkBtn.jsx";
-import FilterTabs from "../ui/FilterTabs.jsx";
 import LoadError from "../ui/LoadError.jsx";
 import Loader from "../ui/Loader.jsx";
 import { useApi } from "../../hooks/useApi.js";
 import { useDebounced } from "../../hooks/useDebounced.js";
-
-const tabs = [
-  { value: "cafes", label: "Cafés" },
-  { value: "people", label: "Coffee Drinkers" },
-];
 
 // Explore panel. Rendered by UserLayout; the inner panel remounts on every open so the query resets.
 function SearchOverlay({ open, onClose, onSuggest }) {
@@ -22,7 +15,6 @@ function SearchOverlay({ open, onClose, onSuggest }) {
 
 function SearchPanel({ onClose, onSuggest }) {
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState("cafes");
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -35,12 +27,10 @@ function SearchPanel({ onClose, onSuggest }) {
     };
   }, [onClose]);
 
-  // only the visible tab fetches; typing waits 250 ms before searching
+  // typing waits 250 ms before searching
   const q = encodeURIComponent(useDebounced(query.trim()));
-  const cafeSearch = useApi(tab === "cafes" ? `/cafes?q=${q}&limit=20` : null);
-  const userSearch = useApi(tab === "people" ? `/users?q=${q}` : null);
-  const search = tab === "cafes" ? cafeSearch : userSearch;
-  const results = (tab === "cafes" ? search.data?.cafes : search.data?.users) ?? [];
+  const search = useApi(`/cafes?q=${q}&limit=20`);
+  const results = search.data?.cafes ?? [];
   const empty = !search.loading && !search.error && results.length === 0;
 
   return (
@@ -68,30 +58,23 @@ function SearchPanel({ onClose, onSuggest }) {
           </button>
         </div>
 
-        <FilterTabs tabs={tabs} value={tab} onChange={setTab} size="sm" label="Search in" className="shrink-0 px-5 pt-4 md:px-6" />
-
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 md:px-4">
           {search.loading && results.length === 0 && <Loader />}
           {search.error && <LoadError message={search.error} onRetry={search.reload} />}
           {empty && (
             <p className="px-3 py-10 text-center text-sm text-secondary">
-              {query.trim()
-                ? `No ${tab === "cafes" ? "cafés" : "coffee drinkers"} match “${query.trim()}”.`
-                : `No ${tab === "cafes" ? "cafés" : "coffee drinkers"} yet.`}
+              {query.trim() ? `No cafés match “${query.trim()}”.` : "No cafés yet."}
             </p>
           )}
-          {tab === "cafes" &&
-            results.map((cafe) => (
-              <CompactCafeRow
-                key={cafe.id}
-                cafe={cafe}
-                bordered={false}
-                onNavigate={onClose}
-                right={<BookmarkBtn cafeId={cafe.id} />}
-              />
-            ))}
-          {tab === "people" &&
-            results.map((user) => <SearchUserRow key={user.id} user={user} onNavigate={onClose} />)}
+          {results.map((cafe) => (
+            <CompactCafeRow
+              key={cafe.id}
+              cafe={cafe}
+              bordered={false}
+              onNavigate={onClose}
+              right={<BookmarkBtn cafeId={cafe.id} />}
+            />
+          ))}
         </div>
 
         <div className="shrink-0 border-t border-base-300 px-6 py-4 text-center text-sm">

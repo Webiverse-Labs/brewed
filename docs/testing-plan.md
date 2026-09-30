@@ -35,7 +35,7 @@ File each failure as its own bug (see [Reporting bugs](#reporting-bugs)) and lin
 | Area | Scenarios | Tester (fill in per round) |
 |---|---|---|
 | Auth | A1–A8 | |
-| Home, Explore, café page | H1–H4, C1–C4 | |
+| Home, Explore, café page | H1–H5, C1–C4 | |
 | Log a Visit, Suggest a Café | L1–L5, G1–G2 | |
 | Profile, notifications, settings | P1–P3, N1–N2, S1–S4 | |
 | Admin panel | AD1–AD8 | |
@@ -78,8 +78,9 @@ Each line is: what to do → what should happen. The IDs go in bug reports.
 ### Home, Explore, café page
 - [ ] **H1** Home shows the Popular, Featured, top-rated, and newest café rows. Each café opens its page
 - [ ] **H2** Explore → Cafés: search by name ("Onyx"), area ("Makati"), and tag ("Pour-over") → matching cafés
-- [ ] **H3** Explore → Coffee Drinkers: search a name → user rows. Follow / Following toggles and stays after a refresh
+- [ ] **H3** Explore only searches cafés: there's no Coffee Drinkers tab (removed on purpose). Following still works from a profile (P2)
 - [ ] **H4** Search for nonsense ("zzzz") → an empty state, not a blank panel or an error
+- [ ] **H5** With Explore open, click a navbar link (desktop) or press the browser back button → Explore closes and the new page shows
 - [ ] **C1** Café page shows address, hours, description, rating breakdown, and public reviews
 - [ ] **C2** Anonymous reviews show no name or avatar
 - [ ] **C3** Bookmark a café → it appears in Profile → Favorites, and is still bookmarked after a refresh. Un-bookmark removes it
@@ -106,7 +107,7 @@ Each line is: what to do → what should happen. The IDs go in bug reports.
 - [ ] **S4** *(own account)* Delete account → logged out, can't log in again, and that account's reviews are gone from café pages
 
 ### Admin panel (`/admin`)
-- [ ] **AD1** `/admin/login` with `margotbrews@…` → refused. With `admin@brewed.app` → dashboard
+- [ ] **AD1** On `/login`, click the Brewed logo under the form 5 times quickly → `/admin/login` (no visible link or hover cue). There, `margotbrews@…` → refused. With `admin@brewed.app` → dashboard
 - [ ] **AD2** As a normal user, open `/admin` → not allowed in
 - [ ] **AD3** Dashboard totals and "recent" lists match the data. Add a café, and the total goes up
 - [ ] **AD4** Cafés: search. Add a café with photos, tags ("Specialty, Pour-over"), and an address → the area is derived from the address and it shows in Explore. Edit it. Disable it → gone from Home/Explore but still in the admin list. Enable it again
