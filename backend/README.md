@@ -20,6 +20,7 @@ npm run dev            # http://localhost:4000
 | `JWT_SECRET` | Long random string used to sign login tokens |
 | `CLIENT_URL` | Frontend origin allowed by CORS, default `http://localhost:5173` |
 | `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM` | Sends verification and password-reset emails through the team Gmail account. Leave empty locally: the email (with its link) is printed in the server log instead |
+| `GOOGLE_CLIENT_ID` | Public OAuth Client ID for "Sign in with Google". Empty turns it off. The frontend needs the same value as `VITE_GOOGLE_CLIENT_ID` |
 | `SEED_PASSWORD` | Password given to every account `npm run seed` creates, including `admin@brewed.app` |
 
 ## Seeding
@@ -40,7 +41,7 @@ src/
 ├── controllers/       # the logic, one file per resource
 ├── routes/            # URL -> controller, wrapped in asyncHandler
 ├── middlewares/       # auth (protect / requireVerified / optionalAuth), requireAdmin, uploads (Multer), errors
-└── lib/               # ApiError, JWT cookie, email + email tokens, café stats, notifications, query helpers
+└── lib/               # ApiError, JWT cookie, email + email tokens, Google ID-token check, café stats, notifications, query helpers
 scripts/               # smoke tests, and serve-vercel.mjs (runs the Vercel function locally)
 ```
 
@@ -66,9 +67,11 @@ comes from an allowlist, not the uploader's filename, and each file's first byte
 ## Smoke tests
 
 `scripts/smoke.mjs` (127 checks) and `scripts/smoke_security.mjs` (7 upload-safety checks) call the running API end to end.
+`scripts/smoke_google.mjs` (32 checks) runs the app in-process and signs its own Google-style ID tokens, so the Google sign-in
+logic (token checks, linking, the takeover case, admin refusal) is tested without a Google account or network.
 They **write data** (sign up, suspend and delete accounts), so run them only against a freshly seeded throwaway database,
 never the shared Atlas cluster or the test env. CI runs them on every PR. `smoke.mjs` also needs `MONGO_URI`: emailed tokens are
-stored hashed, so it writes known ones straight into the database.
+stored hashed, so it writes known ones straight into the database. `smoke_google.mjs` needs `MONGO_URI` and `JWT_SECRET` too.
 
 ```bash
 docker run -d --rm --name brewed-mongo -p 27017:27017 mongo:7   # throwaway DB (mongo:8 won't start on some newer Linux kernels)

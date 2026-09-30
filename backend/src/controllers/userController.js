@@ -135,7 +135,8 @@ export async function updateAvatar(req, res) {
 export async function changePassword(req, res) {
   const { current, next } = req.body ?? {};
   const user = await User.findById(req.user._id).select("+password");
-  if (!(await user.comparePassword(current))) throw new ApiError(400, "Current password is incorrect.");
+  //a Google-only account has no current password: this is how it sets its first one
+  if (user.password && !(await user.comparePassword(current))) throw new ApiError(400, "Current password is incorrect.");
   user.password = String(next ?? "");
   await user.save(); //minlength is checked before hashing
   res.json({ message: "Password updated." });

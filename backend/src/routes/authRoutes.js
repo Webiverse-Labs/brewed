@@ -1,6 +1,7 @@
 import express from "express";
 import {
   forgotPassword,
+  googleSignIn,
   login,
   logout,
   me,
@@ -16,6 +17,7 @@ const router = express.Router();
 
 router.post("/signup", asyncHandler(signup));
 router.post("/login", asyncHandler(login));
+router.post("/google", asyncHandler(googleSignIn));
 router.post("/logout", asyncHandler(logout));
 router.post("/verify-email", asyncHandler(verifyEmail));
 router.post("/resend-verification", protect, asyncHandler(resendVerification));

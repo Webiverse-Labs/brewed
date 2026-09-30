@@ -9,7 +9,9 @@ import api, { errorMessage } from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 
 function SecuritySettings({ onDeleteAccount }) {
-  const { logout } = useAuth();
+  const { user, updateUser, logout } = useAuth();
+  // accounts created with Google have no password yet; this form is how they add one
+  const hasPassword = user.hasPassword !== false;
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
 
@@ -22,7 +24,8 @@ function SecuritySettings({ onDeleteAccount }) {
     setSaving(true);
     try {
       await api.patch("/users/me/password", { current: data.get("current"), next: data.get("next") });
-      toast.success("Password updated.");
+      updateUser({ hasPassword: true });
+      toast.success(hasPassword ? "Password updated." : "Password set. You can now log in with your email too.");
       form.reset();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -38,10 +41,17 @@ function SecuritySettings({ onDeleteAccount }) {
   return (
     <div className="flex flex-col gap-8">
       <form onSubmit={handlePassword} className="flex flex-col gap-4">
-        <SectionLabel>Update Password</SectionLabel>
-        <Field label="Current Password">
-          <PasswordInput name="current" required placeholder="••••••••" autoComplete="current-password" />
-        </Field>
+        <SectionLabel>{hasPassword ? "Update Password" : "Set a Password"}</SectionLabel>
+        {!hasPassword && (
+          <p className="-mt-2 text-[13px] text-secondary">
+            You signed in with Google. Set a password if you also want to log in with your email.
+          </p>
+        )}
+        {hasPassword && (
+          <Field label="Current Password">
+            <PasswordInput name="current" required placeholder="••••••••" autoComplete="current-password" />
+          </Field>
+        )}
         <Field label="New Password">
           <PasswordInput name="next" required minLength={8} autoComplete="new-password" />
         </Field>
@@ -49,7 +59,7 @@ function SecuritySettings({ onDeleteAccount }) {
           <PasswordInput name="confirm" required minLength={8} autoComplete="new-password" />
         </Field>
         <Button type="submit" className="self-start" disabled={saving}>
-          {saving ? "Updating…" : "Update Password"}
+          {saving ? "Saving…" : hasPassword ? "Update Password" : "Set Password"}
         </Button>
       </form>
 

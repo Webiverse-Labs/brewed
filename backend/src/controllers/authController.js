@@ -4,6 +4,7 @@ import { clearAuthCookie, setAuthCookie } from "../lib/generateToken.js";
 import { mePayload } from "../lib/userPayload.js";
 import { createToken, hashToken } from "../lib/emailTokens.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email.js";
+import { verifyGoogleCredential } from "../lib/google.js";
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const TOKEN_TTL_MS = { verify: 24 * 60 * 60 * 1000, reset: 60 * 60 * 1000 };
@@ -40,6 +41,9 @@ async function issueToken(kind, filter) {
 //shared by user login and admin login; String() stops `{ "$gt": "" }`-style query injection
 export async function verifyCredentials(email, password) {
   const user = await User.findOne({ email: String(email ?? "").toLowerCase().trim() }).select("+password");
+  if (user && !user.password) {
+    throw new ApiError(401, "This account uses Google sign-in. Continue with Google, or reset your password to add one.");
+  }
   if (!user || !(await user.comparePassword(password))) throw new ApiError(401, "Incorrect email or password.");
   if (user.status === "suspended") throw new ApiError(403, "This account has been suspended.");
   return user;
@@ -154,4 +158,51 @@ export async function resetPassword(req, res) {
 
   setAuthCookie(res, user._id);
   res.json({ user: await mePayload(user) });
+}
+
+//POST /api/auth/google { credential } -> the ID token from the "Sign in with Google" button; logs in, links or creates
+export async function googleSignIn(req, res) {
+  const credential = req.body?.credential;
+  if (!credential || typeof credential !== "string") throw new ApiError(400, "Missing Google credential.");
+
+  const profile = await verifyGoogleCredential(credential);
+  //an unverified Google address proves nothing about who owns the inbox
+  if (!profile.email || !profile.email_verified) throw new ApiError(401, "Your Google account's email isn't verified.");
+  const email = profile.email.toLowerCase();
+
+  let user =
+    (await User.findOne({ googleId: profile.sub }).select("+password +googleId")) ??
+    (await User.findOne({ email }).select("+password +googleId"));
+  let isNew = false;
+
+  if (user) {
+    if (user.role === "admin") throw new ApiError(403, "Admins sign in at the admin login.");
+    if (user.status === "suspended") throw new ApiError(403, "This account has been suspended.");
+
+    if (user.googleId && user.googleId !== profile.sub) {
+      throw new ApiError(409, "That email is already linked to a different Google account.");
+    }
+    if (!user.googleId) {
+      //Closes a takeover: someone signs up with a victim's email and a password they know, the victim later uses
+      //Google. The old password and any session it created are cut off, so the account really is the victim's.
+      if (!user.emailVerified) {
+        user.set({ password: undefined, hasPassword: false, sessionsValidAfter: new Date() });
+      }
+      user.set({ googleId: profile.sub, emailVerified: true });
+      await user.save();
+    }
+  } else {
+    isNew = true;
+    user = await User.create({
+      name: String(profile.name || email.split("@")[0]).slice(0, 80),
+      email,
+      username: await uniqueUsername(email),
+      googleId: profile.sub,
+      emailVerified: true,
+      hasPassword: false,
+    });
+  }
+
+  setAuthCookie(res, user._id);
+  res.status(isNew ? 201 : 200).json({ user: await mePayload(user), isNew });
 }
