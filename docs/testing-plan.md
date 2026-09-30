@@ -78,7 +78,7 @@ Each line is: what to do → what should happen. The IDs go in bug reports.
 ### Home, Explore, café page
 - [ ] **H1** Home shows the Popular, Featured, top-rated, and newest café rows. Each café opens its page
 - [ ] **H2** Explore → Cafés: search by name ("Onyx"), area ("Makati"), and tag ("Pour-over") → matching cafés
-- [ ] **H3** Explore → Coffee Drinkers: search a name → user rows. Follow / Following toggles and stays after a refresh
+- [ ] **H3** Explore only searches cafés: there's no Coffee Drinkers tab (removed on purpose). Following still works from a profile (P2)
 - [ ] **H4** Search for nonsense ("zzzz") → an empty state, not a blank panel or an error
 - [ ] **C1** Café page shows address, hours, description, rating breakdown, and public reviews
 - [ ] **C2** Anonymous reviews show no name or avatar
