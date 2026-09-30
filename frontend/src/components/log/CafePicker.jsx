@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Search } from "lucide-react";
 import TextInput from "../ui/TextInput.jsx";
 import CafeImg from "../cafe/CafeImg.jsx";
@@ -9,6 +9,15 @@ import { useDebounced } from "../../hooks/useDebounced.js";
 function CafePicker({ value: selected, onChange }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  //picking a café swaps the search for the chosen-café card (and "Change" swaps it back), which removes the
+  //focused element; move focus to the control that replaces it so keyboard users don't land at the top of the page
+  const moveFocus = useRef(false);
+  const focusIfSwapped = (el) => {
+    if (el && moveFocus.current) {
+      moveFocus.current = false;
+      el.focus();
+    }
+  };
   const q = encodeURIComponent(useDebounced(query.trim()));
   //only search while the list is open and nothing is chosen
   const { data, loading } = useApi(open && !selected ? `/cafes?q=${q}&limit=6` : null);
@@ -24,7 +33,15 @@ function CafePicker({ value: selected, onChange }) {
           <p className="truncate font-display font-semibold">{selected.name}</p>
           <p className="truncate text-[13px] text-secondary">{selected.area}</p>
         </div>
-        <button type="button" onClick={() => onChange(null)} className="text-sm font-medium text-accent hover:underline">
+        <button
+          ref={focusIfSwapped}
+          type="button"
+          onClick={() => {
+            moveFocus.current = true;
+            onChange(null);
+          }}
+          className="text-sm font-medium text-accent hover:underline"
+        >
           Change
         </button>
       </div>
@@ -32,6 +49,7 @@ function CafePicker({ value: selected, onChange }) {
   }
 
   const pick = (cafe) => {
+    moveFocus.current = true;
     onChange(cafe);
     setQuery("");
     setOpen(false);
@@ -46,6 +64,7 @@ function CafePicker({ value: selected, onChange }) {
       }}
     >
       <TextInput
+        ref={focusIfSwapped}
         look="outlined"
         icon={Search}
         placeholder="Search for a café…"
