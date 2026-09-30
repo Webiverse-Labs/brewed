@@ -47,6 +47,12 @@ function AuthProvider({ children }) {
         setUser(data.user);
         return data.user;
       },
+      //credential = the ID token from the Google button; resolves to { user, isNew }
+      loginWithGoogle: async (credential) => {
+        const { data } = await api.post("/auth/google", { credential });
+        setUser(data.user);
+        return data;
+      },
       //only the server can clear the httpOnly cookie, so stay logged in if it didn't answer.
       //Resolves to false (after telling the user) so callers know not to navigate away.
       logout: async () => {

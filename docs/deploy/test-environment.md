@@ -67,7 +67,13 @@ Ren does steps 1–5. Wion (org owner) may need to approve one GitHub request in
      | `CLIENT_URL` | The site's public URL, e.g. `https://brewed-jade.vercel.app`. Builds the links in verification and reset emails (never taken from request headers) |
      | `GMAIL_USER` | The team Gmail address that sends the emails |
      | `GMAIL_APP_PASSWORD` | A Google *app password* for that account (Google Account → Security → 2-Step Verification → App passwords). Not the login password |
+     | `GOOGLE_CLIENT_ID` | Public OAuth Client ID for "Sign in with Google" (Google Cloud Console → APIs & Services → Credentials → a *Web application* client). Not a secret. Leave it out to hide Google sign-in |
+     | `VITE_GOOGLE_CLIENT_ID` | The **same** value. The frontend reads it while building, so redeploy after changing it |
      | `EMAIL_FROM` | Optional sender name, e.g. `Brewed <team@gmail.com>`. Defaults to `GMAIL_USER` |
+
+     The Google client's *Authorized JavaScript origins* must include the site's exact origin (`https://brewed-jade.vercel.app`, plus
+     `http://localhost:5173` and `:5180` for local work). Sign-in uses Google's ID-token button, so there's no client secret or redirect URI to set.
+     The Google library needs **Node 22 or newer**, so check *Settings → Build and Deployment → Node.js Version* on Vercel.
 
      Without the `GMAIL_*` values the API refuses to send email in production, so signup still works but the verification email doesn't go out.
      Gmail allows about 500 messages a day, plenty for a test env.

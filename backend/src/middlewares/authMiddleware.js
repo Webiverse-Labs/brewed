@@ -8,8 +8,11 @@ async function userFromCookie(req) {
   const token = req.cookies?.token;
   if (!token) return null;
   try {
-    const { id } = jwt.verify(token, process.env.JWT_SECRET);
-    return await User.findById(id);
+    const { id, iat } = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(id);
+    //iat is in whole seconds, so compare at that resolution or a token issued in the same second would be refused
+    if (user?.sessionsValidAfter && iat < Math.floor(user.sessionsValidAfter.getTime() / 1000)) return null;
+    return user;
   } catch {
     return null;
   }

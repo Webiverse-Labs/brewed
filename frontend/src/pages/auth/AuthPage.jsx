@@ -6,6 +6,7 @@ import Field from "../../components/ui/Field.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
 import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
+import GoogleButton from "../../components/auth/GoogleButton.jsx";
 import { errorMessage } from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 
@@ -18,7 +19,7 @@ const modes = [
 function AuthPage() {
   const { pathname, state } = useLocation();
   const navigate = useNavigate();
-  const { login, signup } = useAuth();
+  const { login, signup, loginWithGoogle } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const isSignup = pathname === "/signup";
 
@@ -30,6 +31,18 @@ function AuthPage() {
       const user = isSignup ? await signup({ name, email, password }) : await login(email, password);
       toast.success(isSignup ? "Welcome to Brewed!" : `Welcome back, ${user.name.split(" ")[0]}!`);
       //back to the page that sent them to log in, if any
+      navigate(state?.from?.pathname ?? "/", { replace: true });
+    } catch (err) {
+      toast.error(errorMessage(err));
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogle = async (credential) => {
+    setSubmitting(true);
+    try {
+      const { user, isNew } = await loginWithGoogle(credential);
+      toast.success(isNew ? "Welcome to Brewed!" : `Welcome back, ${user.name.split(" ")[0]}!`);
       navigate(state?.from?.pathname ?? "/", { replace: true });
     } catch (err) {
       toast.error(errorMessage(err));
@@ -82,6 +95,15 @@ function AuthPage() {
           </p>
         )}
       </form>
+      {/* renders nothing unless VITE_GOOGLE_CLIENT_ID is set, so the divider lives in the same wrapper */}
+      {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+        <div className="mt-5 flex flex-col gap-4">
+          <p className="flex items-center gap-3 text-xs text-muted before:h-px before:flex-1 before:bg-base-300 after:h-px after:flex-1 after:bg-base-300">
+            or
+          </p>
+          <GoogleButton text={isSignup ? "signup_with" : "signin_with"} onCredential={handleGoogle} />
+        </div>
+      )}
     </>
   );
 }

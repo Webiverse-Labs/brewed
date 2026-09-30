@@ -17,6 +17,8 @@ API responses use `id` (never `_id`) and never include `__v` or the password has
 | `role` | `user` \| `admin` | Admin login |
 | `status` | `active` \| `suspended` | Admin Users "Suspend" |
 | `favorites` | [Cafe] | Bookmark button, Profile "Favorites" tab |
+| `hasPassword` *(added)* | Boolean, default `true`. `false` for accounts created with Google until they set a password | Settings → Security ("Set a password" vs "Update Password") |
+| `googleId`, `sessionsValidAfter` *(added)* | Google's user id (unique, never selected) and the moment before which login cookies are refused; neither appears in a response | Google sign-in |
 | `emailVerified` *(added)* | Boolean, default `false` | Verify-email banner. Unverified users can't post logs, suggest cafés or follow |
 | `verifyToken*`, `resetToken*` *(added)* | SHA-256 hash, expiry and last-sent time of the emailed links; never selected, never in a response | Verification and password reset emails |
 | `createdAt` | Date | Admin Users "Joined" |
@@ -69,6 +71,7 @@ Errors are always `{ message }` with the right status: 400 bad input, 401 not lo
 |---|---|---|
 | `POST /auth/signup` `{ name, email, password }` | 🔓 | Sets the cookie → `{ user }` |
 | `POST /auth/login` `{ email, password }` | 🔓 | 401 for wrong credentials, 403 if suspended |
+| `POST /auth/google` `{ credential }` | 🔓 | The ID token from Google's button. Logs in, links to the account with that email, or creates one → `{ user, isNew }`. 401 for a bad or unverified token, 403 for admins and suspended accounts, 409 if the email is already linked to a different Google account, 503 if `GOOGLE_CLIENT_ID` is unset |
 | `POST /auth/logout` | 🔓 | Clears the cookie |
 | `POST /auth/verify-email` `{ token }` | 🔓 | Marks the email verified. 400 for a wrong or expired (24 h) token. Opening the same link again is harmless |
 | `POST /auth/resend-verification` | 🔑 | One email per minute (429 after that). 400 if already verified |

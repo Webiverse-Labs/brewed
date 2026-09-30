@@ -34,7 +34,7 @@ File each failure as its own bug (see [Reporting bugs](#reporting-bugs)) and lin
 
 | Area | Scenarios | Tester (fill in per round) |
 |---|---|---|
-| Auth | A1–A14 | |
+| Auth | A1–A19 | |
 | Home, Explore, café page | H1–H5, C1–C4 | |
 | Log a Visit, Suggest a Café | L1–L5, G1–G2 | |
 | Profile, notifications, settings | P1–P3, N1–N2, S1–S4 | |
@@ -80,6 +80,11 @@ Each line is: what to do → what should happen. The IDs go in bug reports.
 - [ ] **A12** Open the verification link a second time → still "Email verified". Open a mangled link (delete a few characters after `#token=`) → "Link didn't work", and your account's status doesn't change
 - [ ] **A13** Log in page → Reset it → enter your email → "If an account exists…" (same message for an email that has no account). The reset email arrives, its link opens a form, and saving a new password logs you in
 - [ ] **A14** Use the same reset link again → "Link didn't work" with a Get a New Link button (it works while logged in too). The old password no longer works, the new one does
+- [ ] **A15** Sign up / Log in pages show **Sign up with Google** / **Sign in with Google**. With a Google account that has no Brewed account → lands on Home, logged in, and **no** verification banner (Google already confirmed the email)
+- [ ] **A16** Sign in with Google using an email that **already has a Brewed account you verified** → you're in that same account (your reviews are still there) and the old password still works
+- [ ] **A17** Log out, then Sign in with Google again → same account, "Welcome back". Settings → Security shows **Set a password** without a current-password field. Set one, log out, and log in with email + password
+- [ ] **A18** Pre-register an email **without verifying it**, then sign in with Google using that email → you land in a clean account; the password from the first signup no longer works, and a browser still logged in from it is signed out
+- [ ] **A19** On the log-in form, enter the email of a Google-only account with any password → the error says the account uses Google sign-in. `/admin/login` has no Google button, and a Google account whose email is the admin's is refused
 
 ### Home, Explore, café page
 - [ ] **H1** Home shows the Popular, Featured, top-rated, and newest café rows. Each café opens its page
