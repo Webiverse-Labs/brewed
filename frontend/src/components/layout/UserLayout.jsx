@@ -10,20 +10,23 @@ import { useAuth } from "../../hooks/useAuth.js";
 // Signed-in shell. Pages reach the shared overlays through useOutletContext():
 //   const { openSuggest, openExplore } = useOutletContext();
 function UserLayout() {
-  // Explore remembers the location it was opened on, so any navigation (navbar link, back button) closes it
-  const { key: locationKey } = useLocation();
-  const [exploreKey, setExploreKey] = useState(null);
-  const exploreOpen = exploreKey === locationKey;
+  const [exploreOpen, setExploreOpen] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
 
-  const toggleExplore = useCallback(
-    () => setExploreKey((k) => (k === locationKey ? null : locationKey)),
-    [locationKey],
-  );
-  const openExplore = useCallback(() => setExploreKey(locationKey), [locationKey]);
-  const closeExplore = useCallback(() => setExploreKey(null), []);
+  // any navigation (navbar link, back/forward) closes Explore. Reset during render, not in an effect,
+  // so the new page never paints with the panel still on top
+  const { key: locationKey } = useLocation();
+  const [prevLocationKey, setPrevLocationKey] = useState(locationKey);
+  if (locationKey !== prevLocationKey) {
+    setPrevLocationKey(locationKey);
+    setExploreOpen(false);
+  }
+
+  const toggleExplore = useCallback(() => setExploreOpen((o) => !o), []);
+  const openExplore = useCallback(() => setExploreOpen(true), []);
+  const closeExplore = useCallback(() => setExploreOpen(false), []);
   const openSuggest = useCallback(() => {
-    setExploreKey(null);
+    setExploreOpen(false);
     setSuggestOpen(true);
   }, []);
 
