@@ -31,7 +31,10 @@ export async function sendEmail({ to, subject, text, html }) {
     console.log(`\n[email not sent: no Gmail credentials]\nTo: ${to}\nSubject: ${subject}\n${text}\n`);
     return;
   }
-  await getTransport().sendMail({ from: EMAIL_FROM || GMAIL_USER, to, subject, text, html });
+  const info = await getTransport().sendMail({ from: EMAIL_FROM || GMAIL_USER, to, subject, text, html });
+  //Gmail's answer goes in the function log (no address, no link): "accepted" means Gmail took the message, which
+  //is not proof it reached an inbox, so this is the first thing to read when someone says an email never came
+  console.log(`[email] "${subject}" accepted=${info.accepted?.length} rejected=${info.rejected?.length} response="${info.response}"`);
 }
 
 //one shared layout so both emails look the same; `button` is the call-to-action link
