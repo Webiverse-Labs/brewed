@@ -76,10 +76,10 @@ Each line is: what to do → what should happen. The IDs go in bug reports.
 - [ ] **A8** After an admin suspends your own test account (AD5) → login shows "This account has been suspended."
 - [ ] **A9** Sign up with a real inbox → a banner says to verify, and the "Verify your email" email arrives (check spam). Its button opens a page that says "Email verified", and the banner is gone after Continue
 - [ ] **A10** While unverified, try to publish a log, suggest a café and follow someone → each is refused with "Verify your email to do this." Favoriting and editing your profile still work. After verifying, all three work
-- [ ] **A11** Click Resend email twice quickly → the first sends a new email, the second says to wait a minute. Only the newest link needs to work
-- [ ] **A12** Open the verification link a second time → still a friendly page (not an error) when you're logged in. Open a mangled link (delete a few characters) → "Link didn't work"
+- [ ] **A11** On an unverified account, wait a full minute after signing up, then click Resend email twice quickly → the first sends a new email, the second says to wait a minute. (A Resend within a minute of signup, or of the last resend, is refused too.) Only the newest link needs to work
+- [ ] **A12** Open the verification link a second time → still "Email verified". Open a mangled link (delete a few characters after `#token=`) → "Link didn't work", and your account's status doesn't change
 - [ ] **A13** Log in page → Reset it → enter your email → "If an account exists…" (same message for an email that has no account). The reset email arrives, its link opens a form, and saving a new password logs you in
-- [ ] **A14** Use the same reset link again → "Link didn't work" with a Get a New Link button. The old password no longer works, the new one does
+- [ ] **A14** Use the same reset link again → "Link didn't work" with a Get a New Link button (it works while logged in too). The old password no longer works, the new one does
 
 ### Home, Explore, café page
 - [ ] **H1** Home shows the Popular, Featured, top-rated, and newest café rows. Each café opens its page

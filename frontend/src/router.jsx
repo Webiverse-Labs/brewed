@@ -44,16 +44,17 @@ export const router = createBrowserRouter([
         children: [
           { path: "/signup", element: <AuthPage /> },
           { path: "/login", element: <AuthPage /> },
-          { path: "/forgot-password", element: <ForgotPasswordPage /> },
           { path: "/admin/login", element: <AdminLoginPage /> },
         ],
       },
       {
-        // same card as the auth pages, but no GuestOnly: emailed links must work for someone who's already logged in
+        // same card as the auth pages, but no GuestOnly: emailed links (and the "get a new link" page an expired
+        // one points to) must work for someone who's already logged in
         element: <AuthLayout />,
         children: [
           { path: "/verify-email", element: <VerifyEmailPage /> },
           { path: "/reset-password", element: <ResetPasswordPage /> },
+          { path: "/forgot-password", element: <ForgotPasswordPage /> },
         ],
       },
       {

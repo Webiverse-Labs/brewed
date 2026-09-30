@@ -2,7 +2,8 @@ import nodemailer from "nodemailer";
 
 const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-//links always point at CLIENT_URL, never at a request header, so a forged Host can't redirect a reset link
+//links always point at CLIENT_URL, never at a request header, so a forged Host can't redirect a reset link.
+//The token sits in the URL fragment (#token=…), which browsers never send to a server, so it stays out of request logs.
 const clientUrl = () => (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/, "");
 
 let transport;
@@ -18,8 +19,10 @@ function getTransport() {
   return transport;
 }
 
-//Sends via the team Gmail account. Without credentials it logs the email instead (local dev, CI), except in
-//production, where it throws so a missing GMAIL_* variable is noticed. Always await it: a Vercel function is
+//Sends via the team Gmail account. Without credentials it logs the email instead (local dev, CI: the log is how you
+//get the link without a real mailbox, and those tokens only work against a throwaway database). In production it
+//throws instead, so a missing GMAIL_* variable is noticed and a live token never reaches a log; every Vercel
+//deployment counts as production (api/index.js). Always await it: a Vercel function is
 //frozen once the response is sent, so a fire-and-forget send may never leave.
 export async function sendEmail({ to, subject, text, html }) {
   const { GMAIL_USER, GMAIL_APP_PASSWORD, EMAIL_FROM } = process.env;
@@ -47,7 +50,7 @@ function template({ name, intro, button, url, outro }) {
 }
 
 export function sendVerificationEmail(user, rawToken) {
-  const url = `${clientUrl()}/verify-email?token=${rawToken}`;
+  const url = `${clientUrl()}/verify-email#token=${rawToken}`;
   return sendEmail({
     to: user.email,
     subject: "Verify your email for Brewed",
@@ -62,7 +65,7 @@ export function sendVerificationEmail(user, rawToken) {
 }
 
 export function sendPasswordResetEmail(user, rawToken) {
-  const url = `${clientUrl()}/reset-password?token=${rawToken}`;
+  const url = `${clientUrl()}/reset-password#token=${rawToken}`;
   return sendEmail({
     to: user.email,
     subject: "Reset your Brewed password",

@@ -70,9 +70,9 @@ Errors are always `{ message }` with the right status: 400 bad input, 401 not lo
 | `POST /auth/signup` `{ name, email, password }` | 🔓 | Sets the cookie → `{ user }` |
 | `POST /auth/login` `{ email, password }` | 🔓 | 401 for wrong credentials, 403 if suspended |
 | `POST /auth/logout` | 🔓 | Clears the cookie |
-| `POST /auth/verify-email` `{ token }` | 🔓 | Marks the email verified. 400 for a wrong, used or expired (24 h) token |
+| `POST /auth/verify-email` `{ token }` | 🔓 | Marks the email verified. 400 for a wrong or expired (24 h) token. Opening the same link again is harmless |
 | `POST /auth/resend-verification` | 🔑 | One email per minute (429 after that). 400 if already verified |
-| `POST /auth/forgot-password` `{ email }` | 🔓 | Always 200 with the same message, so it doesn't reveal which emails have accounts. Link lasts 1 h |
+| `POST /auth/forgot-password` `{ email }` | 🔓 | Always 200 with the same message, so it doesn't reveal which emails have accounts. Link lasts 1 h, works once |
 | `POST /auth/reset-password` `{ token, password }` | 🔓 | Sets the password, marks the email verified, logs the user in → `{ user }`. 400 for a bad token or short password |
 | `GET /auth/me` | optional | `{ user }` including `favorites` and `unreadNotifications`, or `{ user: null }` |
 | `GET /cafes?q=&sort=popular\|rating\|new&featured=true&limit=` | 🔓 | Active cafés only. `q` matches name, area and tags |
