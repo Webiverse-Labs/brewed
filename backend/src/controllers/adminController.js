@@ -78,6 +78,7 @@ export async function createCafe(req, res) {
 
 //PATCH /api/admin/cafes/:id (JSON or multipart) -> edit fields, toggle `active`/`featured`, append photos
 export async function updateCafe(req, res) {
+  let saved = false; //after save the café points at the new photos, so a later failure must not delete them
   try {
     const cafe = await findById(Cafe, req.params.id, "Café");
     const body = req.body ?? {};
@@ -90,6 +91,7 @@ export async function updateCafe(req, res) {
     if (body.featured !== undefined) cafe.featured = toBool(body.featured);
     if (req.files?.length) cafe.photos.push(...req.files.map((file) => fileUrl("cafes", file)));
     await cafe.save();
+    saved = true;
 
     //people who saved the café hear about new opening hours
     if (body.hours !== undefined && cafe.hours !== previousHours && cafe.active) {
@@ -102,7 +104,7 @@ export async function updateCafe(req, res) {
 
     res.json({ cafe });
   } catch (err) {
-    discardUploads(req);
+    if (!saved) discardUploads(req);
     throw err;
   }
 }
@@ -156,24 +158,34 @@ export async function reviewSuggestion(req, res) {
   const { status } = req.body ?? {};
   if (!["approved", "rejected"].includes(status)) throw new ApiError(400, "Status must be approved or rejected.");
 
-  const suggestion = await findById(Suggestion, req.params.id, "Suggestion");
-  if (suggestion.status !== "pending") throw new ApiError(409, `This suggestion was already ${suggestion.status}.`);
+  const pending = await findById(Suggestion, req.params.id, "Suggestion");
+  if (pending.status !== "pending") throw new ApiError(409, `This suggestion was already ${pending.status}.`);
+
+  //claim it atomically: of two admins approving at once, only one gets past here, so only one café is created
+  const suggestion = await Suggestion.findOneAndUpdate(
+    { _id: pending._id, status: "pending" },
+    { status, reviewedAt: new Date() },
+    { returnDocument: "after" },
+  );
+  if (!suggestion) throw new ApiError(409, "Another admin just reviewed this suggestion.");
 
   let cafe = null;
   if (status === "approved") {
-    cafe = await Cafe.create({
-      name: suggestion.name,
-      address: suggestion.address,
-      area: areaFromAddress(suggestion.address),
-      hours: suggestion.hours,
-      description: suggestion.description,
-      photos: suggestion.photo ? [suggestion.photo] : [],
-    });
+    try {
+      cafe = await Cafe.create({
+        name: suggestion.name,
+        address: suggestion.address,
+        area: areaFromAddress(suggestion.address),
+        hours: suggestion.hours,
+        description: suggestion.description,
+        photos: suggestion.photo ? [suggestion.photo] : [],
+      });
+    } catch (err) {
+      //publishing failed: put it back in the queue so it can be approved again
+      await Suggestion.updateOne({ _id: suggestion._id }, { status: "pending", $unset: { reviewedAt: 1 } });
+      throw err;
+    }
   }
-
-  suggestion.status = status;
-  suggestion.reviewedAt = new Date();
-  await suggestion.save();
 
   if (suggestion.submittedBy) {
     const message =

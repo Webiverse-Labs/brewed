@@ -17,6 +17,11 @@ import { UPLOAD_ROOT, setUploadHeaders } from "./middlewares/uploadMiddleware.js
 //allow access to env file
 dotenv.config();
 
+//every login signs a JWT with this; refuse to start without it rather than failing on the first signup
+if (!process.env.JWT_SECRET?.trim()) {
+  throw new Error("JWT_SECRET is not set. Add it to backend/.env (see .env.example).");
+}
+
 //initializes express
 const app = express();
 
