@@ -1,11 +1,29 @@
-import { Outlet } from "react-router-dom";
+import { useRef } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 import CoffeeBean from "../ui/CoffeeBean.jsx";
 import Logo from "../ui/Logo.jsx";
 
 const bullets = ["Discover & rate cafés", "Log every visit", "Track your coffee history"];
+const ADMIN_CLICKS = 5;
+const CLICK_GAP_MS = 1500;
 
 // Figma `LandingPage`: shared hero on the left, the route's form card on the right.
 function AuthLayout() {
+  const navigate = useNavigate();
+  const clicks = useRef({ count: 0, last: 0 });
+
+  // Hidden admin entry: 5 quick clicks on the logo open /admin/login. No cursor, hover or focus cue on purpose.
+  const onLogoClick = () => {
+    const now = Date.now();
+    const c = clicks.current;
+    c.count = now - c.last < CLICK_GAP_MS ? c.count + 1 : 1;
+    c.last = now;
+    if (c.count === ADMIN_CLICKS) {
+      c.count = 0;
+      navigate("/admin/login");
+    }
+  };
+
   return (
     <div className="mx-auto grid min-h-screen max-w-[1024px] content-center items-center gap-10 px-5 py-10 md:grid-cols-[1fr_340px] md:gap-16 md:px-12">
       <div className="text-center md:text-left">
@@ -33,7 +51,10 @@ function AuthLayout() {
         <div className="w-full max-w-[400px] rounded-3xl border border-base-300 bg-surface p-7 shadow-soft">
           <Outlet />
         </div>
-        <Logo size="lg" />
+        {/* select-none: rapid clicks would otherwise highlight the text; touch-manipulation stops double-tap zoom */}
+        <div onClick={onLogoClick} className="touch-manipulation select-none">
+          <Logo size="lg" />
+        </div>
       </div>
     </div>
   );

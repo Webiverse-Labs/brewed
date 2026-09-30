@@ -107,7 +107,7 @@ Each line is: what to do → what should happen. The IDs go in bug reports.
 - [ ] **S4** *(own account)* Delete account → logged out, can't log in again, and that account's reviews are gone from café pages
 
 ### Admin panel (`/admin`)
-- [ ] **AD1** `/admin/login` with `margotbrews@…` → refused. With `admin@brewed.app` → dashboard
+- [ ] **AD1** On `/login`, click the Brewed logo under the form 5 times quickly → `/admin/login` (no visible link or hover cue). There, `margotbrews@…` → refused. With `admin@brewed.app` → dashboard
 - [ ] **AD2** As a normal user, open `/admin` → not allowed in
 - [ ] **AD3** Dashboard totals and "recent" lists match the data. Add a café, and the total goes up
 - [ ] **AD4** Cafés: search. Add a café with photos, tags ("Specialty, Pour-over"), and an address → the area is derived from the address and it shows in Explore. Edit it. Disable it → gone from Home/Explore but still in the admin list. Enable it again
