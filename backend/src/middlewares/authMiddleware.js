@@ -24,6 +24,12 @@ export const protect = asyncHandler(async (req, res, next) => {
   next();
 });
 
+//after `protect`: posting, suggesting and following need a verified email
+export function requireVerified(req, res, next) {
+  if (!req.user.emailVerified) return next(new ApiError(403, "Verify your email to do this."));
+  next();
+}
+
 //public route that personalizes when logged in (isFavorite, isFollowing); never rejects
 export const optionalAuth = asyncHandler(async (req, res, next) => {
   const user = await userFromCookie(req);

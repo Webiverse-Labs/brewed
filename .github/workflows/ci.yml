@@ -43,7 +43,11 @@ jobs:
       - name: Install (same as vercel.json)
         run: npm ci --prefix backend --omit=dev
       - run: npm run seed --prefix backend
+      # NODE_ENV=test: api/index.js would default to "production", where sending email without Gmail
+      # credentials is an error. Here the emails are just logged, and the smoke tests plant their own tokens.
       - name: Start the Vercel function
+        env:
+          NODE_ENV: test
         run: |
           node backend/scripts/serve-vercel.mjs > server.log 2>&1 &
           for i in $(seq 1 30); do curl -sf localhost:4000/api/health && exit 0; sleep 1; done

@@ -4,6 +4,7 @@ import UserNavbar from "./UserNavbar.jsx";
 import MobileTabBar from "./MobileTabBar.jsx";
 import SearchOverlay from "../cafe/SearchOverlay.jsx";
 import SuggestCafeForm from "../cafe/SuggestCafeForm.jsx";
+import VerifyEmailBanner from "../user/VerifyEmailBanner.jsx";
 import Modal from "../ui/Modal.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 
@@ -37,6 +38,7 @@ function UserLayout() {
     <div className="min-h-screen">
       <UserNavbar exploreOpen={exploreOpen} onExplore={toggleExplore} hasUnread={hasUnread} />
       <main className="pb-28 md:pb-16">
+        {user.emailVerified === false && <VerifyEmailBanner />}
         <Outlet context={{ openSuggest, openExplore }} />
       </main>
       <MobileTabBar exploreOpen={exploreOpen} onExplore={toggleExplore} hasUnread={hasUnread} />
