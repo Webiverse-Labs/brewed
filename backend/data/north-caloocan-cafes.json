@@ -1,0 +1,107 @@
+{
+  "region": "North Caloocan, Metro Manila, Philippines",
+  "researchedOn": "2026-10-19",
+  "notes": "Names and locations were researched from the linked business listings and publications. Unconfirmed opening hours are left blank. Photos, customer reviews, ratings, and visit counts are not imported from external sites.",
+  "cafes": [
+    {
+      "name": "Solstice Coffee",
+      "area": "Tala, North Caloocan",
+      "address": "Langit Road, Tala, North Caloocan City, Metro Manila",
+      "hours": "",
+      "description": "Neighborhood coffee shop on Langit Road in Tala, North Caloocan.",
+      "tags": ["Coffee", "Tala", "North Caloocan"],
+      "sources": [
+        "https://www.waze.com/live-map/directions/ph/ncr/caloocan/solstice-coffee?to=place.ChIJN1bHfQOvlzMR1DVtjES2pLc",
+        "https://wheretocoffee.app/cafe/solstice-coffee"
+      ],
+      "verificationNotes": "Location agrees across the map and cafe directory. Opening times differ between listings, so hours are omitted."
+    },
+    {
+      "name": "Ssoluz Cafe & Studio - Caloocan",
+      "area": "Bagumbong, North Caloocan",
+      "address": "Caloocan Sports Complex, Bagumbong Road corner Malapitan Road, Bagumbong, North Caloocan City",
+      "hours": "",
+      "description": "Cafe and self-photo studio at the Caloocan Sports Complex in Bagumbong.",
+      "tags": ["Coffee", "Cafe and Studio", "Bagumbong", "North Caloocan"],
+      "sources": [
+        "https://restaurantguru.com/Ssoluz-Caloocan-Caloocan",
+        "https://ssoluzstudio.youcanbook.me/"
+      ]
+    },
+    {
+      "name": "Eliot's Cafe",
+      "area": "Saranay, North Caloocan",
+      "address": "Saranay Road, Bagumbong, North Caloocan City",
+      "hours": "",
+      "description": "Independent cafe along Saranay Road with indoor and outdoor seating.",
+      "tags": ["Coffee", "Saranay", "North Caloocan"],
+      "sources": [
+        "https://www.anokape.com/2026/03/Eliots-Cafe-Saranay.html"
+      ],
+      "verificationNotes": "A firsthand visit published in March 2026 identifies the road and neighborhood. The inspected source does not give a street number."
+    },
+    {
+      "name": "Lucia's Kitchen & Cafe",
+      "area": "Saranay, North Caloocan",
+      "address": "Ground Floor, Noah's Square, Congressional Road corner Malapitan Road, North Caloocan City",
+      "hours": "",
+      "description": "Cafe and restaurant serving coffee, breakfast dishes, rice bowls, pasta, and pizza.",
+      "tags": ["Coffee", "Meals", "Saranay", "North Caloocan"],
+      "sources": [
+        "https://www.findglocal.com/PH/Caloocan/105927285157488/Lucia%27s-Kitchen-%26-Cafe"
+      ],
+      "verificationNotes": "Address follows the business post dated 15 September 2026. The directory header still shows an older Saranay Homes address, and published hours differ."
+    },
+    {
+      "name": "Mahiwaga Cafe - SM City Caloocan",
+      "area": "Bagumbong, North Caloocan",
+      "address": "SM City Caloocan, Deparo Road, Barangay 171, Bagumbong, North Caloocan City",
+      "hours": "",
+      "description": "Homegrown cafe serving specialty coffee, milk tea, and Filipino-inspired food at SM City Caloocan.",
+      "tags": ["Coffee", "Milk Tea", "SM City Caloocan", "North Caloocan"],
+      "sources": [
+        "https://www.smsupermalls.cn/smen/newsdisp.aspx?aid=10683",
+        "https://mb.com.ph/17/3/2025/sm-city-caloocan-where-every-day-feels-like-a-celebration",
+        "https://mb.com.ph/2024/5/27/sm-city-caloocan-your-big-city-mall-is-now-open"
+      ],
+      "verificationNotes": "The mall operator identifies Mahiwaga as a tenant; a March 2025 publication also names the cafe. A floor or unit is not supplied."
+    },
+    {
+      "name": "After Tree Dessert Cafe - SM City Caloocan",
+      "area": "Bagumbong, North Caloocan",
+      "address": "SM City Caloocan, Deparo Road, Barangay 171, Bagumbong, North Caloocan City",
+      "hours": "",
+      "description": "Dessert cafe serving coffee, tea, and cakes at SM City Caloocan.",
+      "tags": ["Coffee", "Desserts", "SM City Caloocan", "North Caloocan"],
+      "sources": [
+        "https://www.foodpanda.ph/restaurant/jfou/after-tree-dessert-cafe-caloocan/reviews",
+        "https://restaurantguru.com/After-Tree-Dessert-Cafe-SM-City-Caloocan-Caloocan",
+        "https://mb.com.ph/2024/5/27/sm-city-caloocan-your-big-city-mall-is-now-open"
+      ]
+    },
+    {
+      "name": "J.CO Donuts & Coffee - SM City Caloocan",
+      "area": "Bagumbong, North Caloocan",
+      "address": "Ground Floor, SM City Caloocan, Deparo Road, Barangay 171, Bagumbong, North Caloocan City",
+      "hours": "",
+      "description": "Ground-floor donut and coffee shop at SM City Caloocan.",
+      "tags": ["Coffee", "Donuts", "SM City Caloocan", "North Caloocan"],
+      "sources": [
+        "https://www.openrice.com/en/manila/r-j-co-donuts-coffee-bagumbong-western-variety-coffee-r231962",
+        "https://brownrepublic.net/experience-big-city-fun-10-reasons-why-sm-city-caloocan-will-be-your-new-favorite-mall/"
+      ]
+    },
+    {
+      "name": "But First, Coffee - SM City Caloocan",
+      "area": "Bagumbong, North Caloocan",
+      "address": "Sky Plaza, 3rd Floor, Oasis Counter SP 304, SM City Caloocan, Deparo Road, Barangay 171, Bagumbong, North Caloocan City",
+      "hours": "",
+      "description": "Coffee shop at SM City Caloocan's Sky Plaza, with espresso and Vietnamese-style drinks.",
+      "tags": ["Coffee", "SM City Caloocan", "North Caloocan"],
+      "sources": [
+        "https://www.foodpanda.ph/restaurant/k9xn/but-first-coffee-sm-city-caloocan/reviews",
+        "https://eatigo.com/en/branches/3395758549411?slot=2026-10-14+10%3A00"
+      ]
+    }
+  ]
+}
