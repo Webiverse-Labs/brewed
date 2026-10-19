@@ -2,5 +2,14 @@
   "name": "brewed",
   "private": true,
   "type": "module",
-  "description": "Repo root: only here so Vercel runs api/index.js as an ES module. Frontend and backend have their own package.json."
+  "description": "Brewed local development commands and Vercel ES module entry point.",
+  "scripts": {
+    "setup": "npm ci --prefix backend && npm ci --prefix frontend",
+    "dev:db": "node scripts/start-mongo.mjs",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "seed": "npm run seed --prefix backend",
+    "lint": "npm run lint --prefix frontend",
+    "build": "npm run build --prefix frontend"
+  }
 }

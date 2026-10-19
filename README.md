@@ -4,6 +4,47 @@ Brewed is a **MERN stack** web application built with MongoDB, Express.js, React
 
 The project is structured into separate **frontend** and **backend** applications, each with its own dependencies and configuration.
 
+## Local quick start
+
+Use Node.js 24 and MongoDB 8. Install the locked packages from the repository root:
+
+```bash
+npm run setup
+```
+
+Copy `backend/.env.example` to `backend/.env` and set these values (use your own random secret and local seed password):
+
+```env
+PORT=4000
+MONGO_URI=mongodb://127.0.0.1:27017/brewed
+JWT_SECRET=replace-with-a-long-random-secret
+CLIENT_URL=http://localhost:5173
+SEED_PASSWORD=replace-with-a-local-password
+```
+
+For a project-local MongoDB installation, extract the [official Windows ZIP](https://www.mongodb.com/docs/v8.0/tutorial/install-mongodb-on-windows-zip/) so that
+`.local/mongodb/bin/mongod.exe` exists. Alternatively, install `mongod` on your PATH.
+The database command below stores persistent data in `.local/mongodb-data` and binds only to `127.0.0.1`.
+Skip it if you already have MongoDB running. `.local/` and `.env` files are git-ignored.
+
+Run each service in a separate terminal from the repository root:
+
+```bash
+npm run dev:db        # MongoDB on 127.0.0.1:27017
+npm run dev:backend   # API on http://localhost:4000
+npm run dev:frontend  # App on http://localhost:5173
+```
+
+Once MongoDB is running, `npm run seed` optionally adds the sample cafés and accounts.
+Log in with `margotbrews@example.com` (or `admin@brewed.app` at `/admin/login`) and the
+`SEED_PASSWORD` in `backend/.env`. Seeding refuses to overwrite an existing user database.
+
+Email links are printed in the backend terminal when Gmail settings are empty.
+Google sign-in is optional and stays hidden until its client ID is configured in both apps.
+No frontend `.env.local` file is needed for the default local addresses.
+
+Run `npm run lint` and `npm run build` from the root to verify the frontend.
+
 ---
 
 ## 🛠️ Tech Stack
@@ -98,7 +139,7 @@ Create a `.env` file inside the `backend` directory:
 
 ```env
 PORT=4000
-MONGODB_URI=your_mongodb_connection_string
+MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 ```
 
@@ -208,7 +249,7 @@ Example:
 
 ```env
 PORT=4000
-MONGODB_URI=your_mongodb_connection_string
+MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 ```
 
@@ -218,7 +259,7 @@ For new contributors, consider providing a `.env.example` file:
 
 ```env
 PORT=4000
-MONGODB_URI=
+MONGO_URI=
 JWT_SECRET=
 ```
 

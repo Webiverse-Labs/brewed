@@ -2,6 +2,9 @@
 node_modules/
 jspm_packages/
 
+# Project-local tools and persistent development database
+.local/
+
 # User-uploaded files (Multer disk storage)
 backend/uploads/
 
