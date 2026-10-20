@@ -44,6 +44,7 @@ Google sign-in is optional and stays hidden until its client ID is configured in
 No frontend `.env.local` file is needed for the default local addresses.
 
 Run `npm run lint` and `npm run build` from the root to verify the frontend.
+Run `npm test --prefix frontend` for the [confirmation dialog interaction tests](docs/confirmation-dialogs.md), which use mocked API responses.
 
 ---
 

@@ -10,14 +10,16 @@ import TextInput from "../../components/ui/TextInput.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
 import Modal from "../../components/ui/Modal.jsx";
-import api, { errorMessage } from "../../lib/api.js";
+import api from "../../lib/api.js";
 import { formatDate, formatMonth } from "../../lib/format.js";
 import { useApi } from "../../hooks/useApi.js";
 import { useDebounced } from "../../hooks/useDebounced.js";
+import { useConfirmation } from "../../hooks/useConfirmation.js";
 
 const columns = ["User", "Email", "Visits", "Joined", "Status", "Actions"];
 
 function AdminUsersPage() {
+  const confirm = useConfirmation();
   const [query, setQuery] = useState("");
   const q = encodeURIComponent(useDebounced(query.trim()));
   const { data, loading, error, reload, setData } = useApi(`/admin/users?q=${q}`);
@@ -25,17 +27,27 @@ function AdminUsersPage() {
 
   const shown = data?.users ?? [];
 
-  const toggleSuspend = async (user) => {
+  const toggleSuspend = (user) => {
     const status = user.status === "active" ? "suspended" : "active";
-    try {
-      await api.patch(`/admin/users/${user.id}`, { status });
-      //d is null if a search failed meanwhile; the detail modal still updates below
-      setData((d) => d && { ...d, users: d.users.map((u) => (u.id === user.id ? { ...u, status } : u)) });
-      setViewing((v) => (v?.id === user.id ? { ...v, status } : v));
-      toast.success(`${user.name} ${status === "suspended" ? "suspended" : "reinstated"}.`);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    }
+    return confirm({
+      title: status === "suspended" ? "Suspend this user?" : "Reinstate this user?",
+      description: <>
+        <strong className="text-base-content">{user.name} (@{user.username})</strong>
+        <p className="mt-3">{status === "suspended"
+          ? "This user will lose access to their account until an administrator reinstates them. Their content will be kept."
+          : "This restores the user's access to Brewed."}</p>
+      </>,
+      confirmLabel: status === "suspended" ? "Suspend User" : "Reinstate User",
+      pendingLabel: "Updating account…",
+      danger: status === "suspended",
+      onConfirm: async () => {
+        await api.patch(`/admin/users/${user.id}`, { status });
+        //d is null if a search failed meanwhile; the detail modal still updates below
+        setData((d) => d && { ...d, users: d.users.map((u) => (u.id === user.id ? { ...u, status } : u)) });
+        setViewing((v) => (v?.id === user.id ? { ...v, status } : v));
+        toast.success(`${user.name} ${status === "suspended" ? "suspended" : "reinstated"}.`);
+      },
+    });
   };
 
   const who = (user) => (

@@ -1,16 +1,14 @@
-import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, UserRound } from "lucide-react";
 import toast from "react-hot-toast";
 import Page from "../../components/layout/Page.jsx";
 import PageTitle from "../../components/layout/PageTitle.jsx";
-import Modal from "../../components/ui/Modal.jsx";
-import Button from "../../components/ui/Button.jsx";
 import ProfileSettingsForm from "../../components/user/ProfileSettingsForm.jsx";
 import SecuritySettings from "../../components/user/SecuritySettings.jsx";
-import api, { errorMessage } from "../../lib/api.js";
+import api from "../../lib/api.js";
 import { cn } from "../../lib/cn.js";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useConfirmation } from "../../hooks/useConfirmation.js";
 
 const sections = [
   { value: "profile", label: "Profile", icon: UserRound },
@@ -20,24 +18,29 @@ const sections = [
 function UserSettingsPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setUser } = useAuth();
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const { user, setUser } = useAuth();
+  const confirm = useConfirmation();
   const tab = params.get("tab") === "security" ? "security" : "profile";
 
-  const deleteAccount = async () => {
-    setDeleting(true);
-    try {
+  const deleteAccount = () => confirm({
+    title: "Permanently delete your account?",
+    description: <>
+      <strong className="text-base-content">{user.email}</strong>
+      <p className="mt-3">Your account, visit logs, follows, related notifications, avatar, and visit photos will be permanently deleted. Café suggestions and published café listings may remain.</p>
+      <p className="mt-3 font-medium text-error">This action cannot be undone.</p>
+    </>,
+    confirmLabel: "Delete My Account",
+    pendingLabel: "Deleting account…",
+    danger: true,
+    verificationText: "DELETE",
+    onConfirm: async () => {
       await api.delete("/users/me");
       //clear the user and leave in the same update, so the guards don't bounce us to /login first
       setUser(null);
       navigate("/signup", { replace: true });
       toast("Your account has been deleted.");
-    } catch (err) {
-      toast.error(errorMessage(err));
-      setDeleting(false);
-    }
-  };
+    },
+  });
 
   return (
     <Page width="medium">
@@ -63,21 +66,10 @@ function UserSettingsPage() {
         </nav>
 
         <div className="rounded-box border border-base-300 bg-surface p-5 md:p-6">
-          {tab === "profile" ? <ProfileSettingsForm /> : <SecuritySettings onDeleteAccount={() => setConfirmOpen(true)} />}
+          {tab === "profile" ? <ProfileSettingsForm /> : <SecuritySettings onDeleteAccount={deleteAccount} />}
         </div>
       </div>
 
-      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Delete account" size="sm">
-        <p className="text-[15px]">Are you sure? This cannot be undone.</p>
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
-            Cancel
-          </Button>
-          <Button variant="danger" onClick={deleteAccount} disabled={deleting}>
-            {deleting ? "Deleting…" : "Yes, Delete"}
-          </Button>
-        </div>
-      </Modal>
     </Page>
   );
 }
