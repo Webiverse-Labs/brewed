@@ -32,12 +32,9 @@ function ExplorePage() {
 
   return (
     <Page>
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-medium text-accent">A good cup, just around the corner</p>
-          <h1 className="mt-1 font-display text-[36px] leading-tight font-medium md:text-[40px]">Explore cafés</h1>
-          <p className="mt-2 text-[15px] text-secondary">Find your next spot on the map.</p>
-        </div>
+      <p className="text-sm font-medium text-accent">A good cup, just around the corner</p>
+      <div className="mt-1 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="font-display text-[36px] leading-tight font-medium md:text-[40px]">Explore cafés</h1>
         <TextInput
           icon={Search} type="search" aria-label="Filter cafés on map" placeholder="Search cafés by name, area, or type…"
           value={query} onChange={(event) => setParams(event.target.value ? { q: event.target.value } : {}, { replace: true })}
