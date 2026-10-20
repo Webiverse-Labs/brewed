@@ -15,6 +15,7 @@ import {
 import { asyncHandler } from "../middlewares/asyncHandlerMiddleware.js";
 import { optionalAuth, protect, requireVerified } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/uploadMiddleware.js";
+import { cancelEmailChange, requestEmailChange } from "../controllers/emailChangeController.js";
 
 const router = express.Router();
 
@@ -22,6 +23,8 @@ const router = express.Router();
 router.patch("/me", protect, asyncHandler(updateMe));
 router.post("/me/avatar", protect, upload("avatars").single("avatar"), asyncHandler(updateAvatar));
 router.patch("/me/password", protect, asyncHandler(changePassword));
+router.patch("/me/email", protect, asyncHandler(requestEmailChange));
+router.delete("/me/email", protect, asyncHandler(cancelEmailChange));
 router.delete("/me", protect, asyncHandler(deleteMe));
 
 router.get("/", optionalAuth, asyncHandler(searchUsers));

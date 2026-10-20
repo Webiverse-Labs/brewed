@@ -11,6 +11,8 @@ API responses use `id` (never `_id`) and never include `__v` or the password has
 | `name` | String, required | Sign Up "Full Name", Settings "Display Name" |
 | `username` | String, unique, 3–30 of `a-z 0-9 _ .` | `@margotbrews` handles, Settings "Username". Derived from the email at sign-up |
 | `email` | String, unique | Sign Up, admin Users table |
+| `pendingEmail` *(added)* | Optional String; visible to the account owner | Settings → Security → Update Email. The current email remains active until the new inbox confirms the change |
+| `emailChange*`, `sessionVersion` *(added)* | Hidden token hash, expiry, original address, resend time, and session counter | Email-change links expire in 24 hours and work once. Confirmation invalidates existing sessions and old verify/reset links. Password changes, recovery, and an unverified account's Google ownership claim cancel pending changes |
 | `password` | bcrypt hash, min 8 chars, never selected by default | Sign Up, Settings → Security |
 | `bio` | String (≤ 200) | Profile, Settings |
 | `avatarUrl` | `/uploads/avatars/…` | Settings "Change Avatar". Falls back to initials |
@@ -75,6 +77,7 @@ Errors are always `{ message }` with the right status: 400 bad input, 401 not lo
 | `POST /auth/google` `{ credential, acceptedPolicies? }` | 🔓 | The ID token from Google's button. Logs in, links to the account with that email, or creates one → `{ user, isNew }`. New accounts require `acceptedPolicies: true`; otherwise returns 400 with `code: POLICY_ACCEPTANCE_REQUIRED` so the UI can ask for agreement first. 401 for a bad or unverified token, 403 for admins and suspended accounts, 409 if the email is already linked to a different Google account, 503 if `GOOGLE_CLIENT_ID` is unset |
 | `POST /auth/logout` | 🔓 | Clears the cookie |
 | `POST /auth/verify-email` `{ token }` | 🔓 | Marks the email verified. 400 for a wrong or expired (24 h) token. Opening the same link again is harmless |
+| `POST /auth/confirm-email-change` `{ token }` | 🔓 | Applies a pending email change once, verifies the new email, and signs out existing sessions. No automatic login. 400 for an invalid/expired link; 409 if the address was taken before confirmation |
 | `POST /auth/resend-verification` | 🔑 | One email per minute (429 after that). 400 if already verified |
 | `POST /auth/forgot-password` `{ email }` | 🔓 | Always 200 with the same message, so it doesn't reveal which emails have accounts. Link lasts 1 h, works once |
 | `POST /auth/reset-password` `{ token, password }` | 🔓 | Sets the password and marks the email verified. Regular users are signed in → `{ user }`. Admins receive `{ adminLoginRequired: true, message }` without a session and must use Admin Access. 400 for a bad token or short password |
@@ -89,6 +92,8 @@ Errors are always `{ message }` with the right status: 400 bad input, 401 not lo
 | `GET /users/:username/visited` · `/favorites` · `/logs` | optional | Diary entries and anonymous reviews are only included for the owner |
 | `POST` / `DELETE /users/:id/follow` | 🔑 (`POST` also ✉️) | → `{ isFollowing }` |
 | `PATCH /users/me` `{ name?, username?, bio? }` | 🔑 | → `{ user }` |
+| `PATCH /users/me/email` `{ email, currentPassword }` | 🔑 | Regular users: rechecks the password and sends a confirmation link to the new inbox; preserves current email and verification. → `{ user, message }`. 409 for an address in use; 429 during the one-minute resend cooldown; 502 on email delivery failure without changing the address. Google-only accounts must first set a password |
+| `DELETE /users/me/email` | 🔑 | Cancels the signed-in account's pending email change and invalidates its link → `{ user, message }` |
 | `POST /users/me/avatar` (multipart `avatar`) | 🔑 | → `{ user }` |
 | `PATCH /users/me/password` `{ current, next }` | 🔑 | |
 | `DELETE /users/me` | 🔑 | Deletes the user's logs, follows, notifications and uploads |

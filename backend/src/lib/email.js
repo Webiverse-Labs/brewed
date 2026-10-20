@@ -81,3 +81,25 @@ export function sendPasswordResetEmail(user, rawToken) {
     }),
   });
 }
+
+export function sendEmailChangeEmail(user, email, rawToken) {
+  return sendEmail({
+    to: email,
+    subject: "Confirm your new email for Brewed",
+    ...template({
+      name: user.name,
+      intro: `You requested to change your Brewed sign-in email from ${user.email} to ${email}. Confirm this address to finish.`,
+      button: "Confirm new email",
+      url: `${clientUrl()}/change-email#token=${rawToken}`,
+      outro: "This link works for 24 hours. Your current email stays unchanged until you confirm. If you didn't request this, ignore the email.",
+    }),
+  });
+}
+
+export function sendEmailChangedNotice(user, previousEmail) {
+  return sendEmail({
+    to: previousEmail,
+    subject: "Your Brewed email was updated",
+    text: `Hi ${user.name},\n\nYour Brewed email was changed to ${user.email}. Existing sessions have been signed out. If you didn't request this change, contact webiverselabs@gmail.com.`,
+  });
+}

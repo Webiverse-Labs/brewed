@@ -10,8 +10,8 @@ const cookieOptions = () => ({
 });
 
 //sign a JWT for this user and store it in the `token` cookie
-export function setAuthCookie(res, userId) {
-  const token = jwt.sign({ id: String(userId) }, process.env.JWT_SECRET, { expiresIn: "7d" });
+export function setAuthCookie(res, user) {
+  const token = jwt.sign({ id: String(user._id), version: user.sessionVersion ?? 0 }, process.env.JWT_SECRET, { expiresIn: "7d" });
   res.cookie("token", token, { ...cookieOptions(), maxAge: SEVEN_DAYS_MS });
 }
 

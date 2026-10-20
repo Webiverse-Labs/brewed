@@ -39,6 +39,12 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, unique: true, sparse: true, select: false },
     //tokens issued before this moment are refused (see userFromCookie): how a session is cut off server-side
     sessionsValidAfter: { type: Date },
+    sessionVersion: { type: Number, default: 0 },
+    pendingEmail: { type: String, trim: true, lowercase: true, maxlength: 254 },
+    emailChangeFrom: { type: String, select: false },
+    emailChangeTokenHash: { type: String, select: false },
+    emailChangeTokenExpires: { type: Date, select: false },
+    emailChangeSentAt: { type: Date, select: false },
     //unverified users can browse but not post, suggest or follow (requireVerified)
     emailVerified: { type: Boolean, default: false },
     // Only new registrations record acceptance; never invent acceptance for existing or seeded accounts.

@@ -9,6 +9,7 @@ import AuthPage from "./pages/auth/AuthPage.jsx";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage.jsx";
 import VerifyEmailPage from "./pages/auth/VerifyEmailPage.jsx";
+import ChangeEmailPage from "./pages/auth/ChangeEmailPage.jsx";
 import HomePage from "./pages/user/HomePage.jsx";
 import CafeProfilePage from "./pages/user/CafeProfilePage.jsx";
 import LogVisitPage from "./pages/user/LogVisitPage.jsx";
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
         element: <AuthLayout />,
         children: [
           { path: "/verify-email", element: <VerifyEmailPage /> },
+          { path: "/change-email", element: <ChangeEmailPage /> },
           { path: "/reset-password", element: <ResetPasswordPage /> },
           { path: "/forgot-password", element: <ForgotPasswordPage /> },
         ],

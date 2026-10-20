@@ -8,6 +8,7 @@ Brewed asks for confirmation before these actions:
 - Approving and publishing, or rejecting, a café suggestion.
 - Setting or changing a password in account settings.
 - Changing an administrator's sign-in email.
+- Requesting or cancelling a user email change in Settings → Security. The new inbox must confirm its emailed link before the address changes; confirmation signs out existing sessions.
 - Logging out, from every user and admin entry point.
 - Permanently deleting an account. The user must type `DELETE` before the destructive button is enabled.
 

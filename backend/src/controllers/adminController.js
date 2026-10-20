@@ -28,7 +28,7 @@ export async function adminLogin(req, res) {
   const { email, password } = req.body ?? {};
   const user = await verifyCredentials(email, password);
   if (user.role !== "admin") throw new ApiError(403, "This account doesn't have admin access.");
-  setAuthCookie(res, user._id);
+  setAuthCookie(res, user);
   res.json({ user: await mePayload(user) });
 }
 

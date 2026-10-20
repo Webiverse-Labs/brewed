@@ -2,7 +2,7 @@ import User from "../models/User.js";
 import { ApiError } from "../lib/ApiError.js";
 import { clearAuthCookie, setAuthCookie } from "../lib/generateToken.js";
 import { mePayload } from "../lib/userPayload.js";
-import { createToken, hashToken } from "../lib/emailTokens.js";
+import { createToken, discardEmailChange, hashToken } from "../lib/emailTokens.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email.js";
 import { verifyGoogleCredential } from "../lib/google.js";
 import { policyAcceptance } from "../lib/policies.js";
@@ -72,7 +72,7 @@ export async function signup(req, res) {
     console.error("Couldn't send the verification email:", error);
   }
 
-  setAuthCookie(res, user._id);
+  setAuthCookie(res, user);
   res.status(201).json({ user: await mePayload(user) });
 }
 
@@ -81,7 +81,7 @@ export async function login(req, res) {
   const { email, password } = req.body ?? {};
   const user = await verifyCredentials(email, password);
   if (user.role === "admin") throw new ApiError(403, "Please use Admin Access to sign in.");
-  setAuthCookie(res, user._id);
+  setAuthCookie(res, user);
   res.json({ user: await mePayload(user) });
 }
 
@@ -163,6 +163,7 @@ export async function resetPassword(req, res) {
 
   //following the emailed link proves they own the inbox, so the address counts as verified too
   user.set({ password: String(password), emailVerified: true, resetTokenHash: undefined, resetTokenExpires: undefined });
+  discardEmailChange(user);
   await user.validate(); //a too-short password is refused here, before the link is used up
 
   //Use the link up with one conditional write. Two requests carrying the same link can both get this far, but only
@@ -178,7 +179,7 @@ export async function resetPassword(req, res) {
     clearAuthCookie(res);
     return res.json({ adminLoginRequired: true, message: "Password updated. Sign in through Admin Access." });
   }
-  setAuthCookie(res, user._id);
+  setAuthCookie(res, user);
   res.json({ user: await mePayload(user) });
 }
 
@@ -209,6 +210,7 @@ export async function googleSignIn(req, res) {
       //Google. The old password and any session it created are cut off, so the account really is the victim's.
       if (!user.emailVerified) {
         user.set({ password: undefined, hasPassword: false, sessionsValidAfter: new Date() });
+        discardEmailChange(user);
       }
       user.set({ googleId: profile.sub, emailVerified: true });
       await user.save();
@@ -227,6 +229,6 @@ export async function googleSignIn(req, res) {
     });
   }
 
-  setAuthCookie(res, user._id);
+  setAuthCookie(res, user);
   res.status(isNew ? 201 : 200).json({ user: await mePayload(user), isNew });
 }

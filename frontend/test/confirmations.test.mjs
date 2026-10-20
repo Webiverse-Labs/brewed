@@ -21,6 +21,7 @@ const { default: react } = await import("@vitejs/plugin-react");
 let vite, root, container, ConfirmationProvider, useConfirmation, AuthContext, AuthProvider, api;
 let AuthPage, AdminLoginPage, ResetPasswordPage, AdminUsersPage, AdminCafesPage, AdminSuggestionsPage, UserSettingsPage, SecuritySettings, AdminSettingsPage;
 let HomePage, UserLayout, ExplorePage;
+let EmailSettings, ChangeEmailPage;
 let ask, navigate;
 const requests = [];
 const person = { id: "user-1", name: "Test User", username: "testuser", email: "test@example.com", status: "active", hasPassword: true, emailVerified: true, visits: 0, favorites: [], createdAt: "2026-10-20T00:00:00Z" };
@@ -53,6 +54,8 @@ before(async () => {
   ({ default: HomePage } = await load("pages/user/HomePage.jsx"));
   ({ default: UserLayout } = await load("components/layout/UserLayout.jsx"));
   ({ default: ExplorePage } = await load("pages/user/ExplorePage.jsx"));
+  ({ default: EmailSettings } = await load("components/user/EmailSettings.jsx"));
+  ({ default: ChangeEmailPage } = await load("pages/auth/ChangeEmailPage.jsx"));
   api.defaults.adapter = async (config) => {
     requests.push({ method: config.method, url: config.url, data: typeof config.data === "string" ? JSON.parse(config.data) : config.data });
     if (!respond) throw new Error(`Unexpected API request: ${config.method} ${config.url}`);
@@ -439,6 +442,79 @@ test("changing the admin sign-in email requires confirmation", async () => {
   await submit();
   assert.equal(mutations()[0].url, "/admin/me");
   assert.equal(mutations()[0].data.email, "new-admin@example.com");
+});
+
+test("user email update validates fields, waits for confirmation, and preserves the current email", async () => {
+  const patches = [];
+  function Settings() {
+    const [user, setUser] = React.useState(person);
+    return h(AuthContext, { value: { user, updateUser: (patch) => { patches.push(patch); setUser((previous) => ({ ...previous, ...patch })); } } }, h(EmailSettings));
+  }
+  respond = () => ({ user: { ...person, pendingEmail: "new@example.com" } });
+  await mount(Settings);
+  await click(button("Update Email"));
+  assert.equal(dialog(), null);
+  assert.equal(mutations().length, 0);
+  await fill(container.querySelector('[name="email"]'), "bad-email");
+  await fill(container.querySelector('[name="emailCurrentPassword"]'), "test-password");
+  await click(button("Update Email"));
+  assert.equal(dialog(), null);
+  await fill(container.querySelector('[name="email"]'), "NEW@example.com");
+  await click(button("Update Email"));
+  assert.match(dialog().textContent, /new@example.com/);
+  assert.equal(mutations().length, 0);
+  await click(button("Cancel", dialog()));
+  assert.equal(container.querySelector('[name="email"]').value, "NEW@example.com");
+  await click(button("Update Email"));
+  await submit();
+  assert.deepEqual(mutations(), [{ method: "patch", url: "/users/me/email", data: { email: "new@example.com", currentPassword: "test-password" } }]);
+  assert.deepEqual(patches, [{ pendingEmail: "new@example.com" }]);
+  assert.match(container.textContent, /Current email: test@example.com/);
+  assert.match(container.textContent, /Waiting for confirmation from new@example.com/);
+  assert.equal(container.querySelector('[name="emailCurrentPassword"]').value, "");
+  await click(button("Cancel Email Change"));
+  await click(button("Cancel Email Change", dialog()));
+  assert.equal(mutations()[1].method, "delete");
+  assert.doesNotMatch(container.textContent, /Waiting for confirmation/);
+});
+
+test("email-update failures stay in the dialog and Google-only accounts are guided to set a password", async () => {
+  respond = () => { throw Object.assign(new Error("In use"), { response: { status: 409, data: { message: "That email address is already in use." } } }); };
+  await mount(EmailSettings, { auth: { updateUser: () => {} } });
+  await fill(container.querySelector('[name="email"]'), "taken@example.com");
+  await fill(container.querySelector('[name="emailCurrentPassword"]'), "test-password");
+  await click(button("Update Email"));
+  await submit();
+  assert.match(dialog().querySelector('[role="alert"]').textContent, /already in use/);
+  await click(button("Cancel", dialog()));
+  await act(async () => root.unmount());
+  container.remove();
+  root = null;
+  await mount(SecuritySettings, { auth: { user: { ...person, hasPassword: false }, updateUser: () => {} } });
+  assert.match(container.querySelector('[aria-label="Update email"]').textContent, /Set an account password below/);
+  assert.equal(container.querySelector('[name="email"]'), null);
+  assert.ok(button("Set Password"));
+});
+
+test("email confirmation requires an explicit click, clears the session on success, and handles bad links", async () => {
+  const updates = [];
+  respond = () => ({ message: "Email updated. Sign in with your new email address." });
+  await mount(ChangeEmailPage, { path: "/change-email#token=test-only-email-token", auth: { setUser: (user) => updates.push(user) } });
+  assert.equal(mutations().length, 0);
+  await click(button("Confirm Email"));
+  assert.deepEqual(mutations(), [{ method: "post", url: "/auth/confirm-email-change", data: { token: "test-only-email-token" } }]);
+  assert.deepEqual(updates, [null]);
+  assert.match(container.textContent, /Email updated/);
+  assert.equal(container.querySelector('a[href="/login"]').textContent, "Log In");
+});
+
+test("expired email-change links display the error without clearing a working session", async () => {
+  const updates = [];
+  respond = () => { throw Object.assign(new Error("Expired"), { response: { status: 400, data: { message: "This email change link is invalid or has expired." } } }); };
+  await mount(ChangeEmailPage, { path: "/change-email#token=expired-test-token", auth: { setUser: (user) => updates.push(user) } });
+  await click(button("Confirm Email"));
+  assert.match(container.querySelector('[role="alert"]').textContent, /invalid or has expired/);
+  assert.deepEqual(updates, []);
 });
 
 test("all logout callers use the shared auth confirmation", async () => {

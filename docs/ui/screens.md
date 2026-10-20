@@ -17,6 +17,7 @@ The active item uses the espresso pill style.
 | **Sign Up** | `/signup` | `86:2006` | `desktop/01-sign-up.png` | `POST /api/auth/signup` {name, email, password, acceptedPolicies: true} |
 | **Privacy Policy** | `/privacy` | — | — | Public policy text, linked from sign-up |
 | **Terms and Conditions** | `/terms` | — | — | Public terms, linked from sign-up |
+| **Confirm email change** *(added)* | `/change-email#token=…` | — | — | Public emailed-link page; explicit Confirm Email action calls `POST /api/auth/confirm-email-change`, then offers Log In |
 | **Log In** | `/login` | `86:2093` | `desktop/02-log-in.png` | `POST /api/auth/login` |
 | **Home** | `/` | `86:2177` | `desktop/03-home.png` | `GET /api/cafes?sort=popular`, `?featured=true`, `?sort=rating`, `?sort=new` |
 | **Explore map** *(added)* | `/explore?q=` | — | — | `GET /api/cafes?q=&limit=100`; Leaflet map with saved café coordinates, shared-location pins, café details and search filtering |

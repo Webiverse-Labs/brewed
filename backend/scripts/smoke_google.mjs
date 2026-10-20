@@ -6,6 +6,7 @@ import { generateKeyPairSync } from "node:crypto";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { POLICY_VERSION } from "../src/lib/policies.js";
+import { createToken } from "../src/lib/emailTokens.js";
 
 const CLIENT_ID = "smoke-test-client.apps.googleusercontent.com";
 process.env.GOOGLE_CLIENT_ID = CLIENT_ID; // before importing the app; dotenv never overrides an existing value
@@ -139,11 +140,15 @@ r = await attacker("POST", "/api/auth/signup", { name: "Mallory", email: victimE
 check("attacker pre-registers the victim's email (unverified)", r.status === 201 && r.body.user?.emailVerified === false, JSON.stringify(r));
 r = await attacker("GET", "/api/auth/me");
 check("attacker's session works before the victim arrives", r.body.user?.email === victimEmail, JSON.stringify(r.body));
+const pendingChange = createToken();
+await User.updateOne({ email: victimEmail }, { pendingEmail: email("attacker-inbox"), emailChangeFrom: victimEmail, emailChangeTokenHash: pendingChange.hash, emailChangeTokenExpires: new Date(Date.now() + 60000) });
 await sleep(1100); // tokens carry whole seconds: make the attacker's session strictly older than the link
 const victim = client();
 r = await victim("POST", "/api/auth/google", { credential: idToken({ sub: `sub-victim-${stamp}`, email: victimEmail, name: "Real Victim" }) });
 check("victim signs in with Google -> linked to that account", r.status === 200 && r.body.isNew === false && r.body.user?.emailVerified === true, JSON.stringify(r));
 check("linking an unverified account removes its password", r.body.user?.hasPassword === false, JSON.stringify(r.body.user));
+r = await client()("POST", "/api/auth/confirm-email-change", { token: pendingChange.raw });
+check("Google ownership claim invalidates an attacker's pending email change", r.status === 400, JSON.stringify(r));
 r = await client()("POST", "/api/auth/login", { email: victimEmail, password: PW });
 check("attacker's password no longer works", r.status === 401, JSON.stringify(r));
 r = await attacker("GET", "/api/auth/me");

@@ -8,6 +8,7 @@ import Button from "../ui/Button.jsx";
 import api from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useConfirmation } from "../../hooks/useConfirmation.js";
+import EmailSettings from "./EmailSettings.jsx";
 
 function SecuritySettings({ onDeleteAccount }) {
   const confirm = useConfirmation();
@@ -34,7 +35,7 @@ function SecuritySettings({ onDeleteAccount }) {
         setSaving(true);
         try {
           await api.patch("/users/me/password", { current: data.get("current"), next: data.get("next") });
-          updateUser({ hasPassword: true });
+          updateUser({ hasPassword: true, pendingEmail: undefined });
           toast.success(hasPassword ? "Password updated." : "Password set. You can now log in with your email too.");
           form.reset();
         } finally {
@@ -50,7 +51,8 @@ function SecuritySettings({ onDeleteAccount }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <form onSubmit={handlePassword} className="flex flex-col gap-4">
+      <EmailSettings />
+      <form id="password-settings" onSubmit={handlePassword} className="flex scroll-mt-24 flex-col gap-4 border-t border-base-300 pt-6">
         <SectionLabel>{hasPassword ? "Update Password" : "Set a Password"}</SectionLabel>
         {!hasPassword && (
           <p className="-mt-2 text-[13px] text-secondary">

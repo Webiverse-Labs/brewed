@@ -12,6 +12,7 @@ import {
 } from "../controllers/authController.js";
 import { asyncHandler } from "../middlewares/asyncHandlerMiddleware.js";
 import { optionalAuth, protect } from "../middlewares/authMiddleware.js";
+import { confirmEmailChange } from "../controllers/emailChangeController.js";
 
 const router = express.Router();
 
@@ -20,6 +21,7 @@ router.post("/login", asyncHandler(login));
 router.post("/google", asyncHandler(googleSignIn));
 router.post("/logout", asyncHandler(logout));
 router.post("/verify-email", asyncHandler(verifyEmail));
+router.post("/confirm-email-change", asyncHandler(confirmEmailChange));
 router.post("/resend-verification", protect, asyncHandler(resendVerification));
 router.post("/forgot-password", asyncHandler(forgotPassword));
 router.post("/reset-password", asyncHandler(resetPassword));

@@ -43,6 +43,8 @@ Email links are printed in the backend terminal when Gmail settings are empty.
 Google sign-in is optional and stays hidden until its client ID is configured in both apps.
 No frontend `.env.local` file is needed for the default local addresses.
 
+Users can update their email in **Settings → Security → Update Email**. Enter the new address and current password, confirm the dialog, then open the confirmation link sent to the new inbox. The old address stays active until confirmation; afterwards sign in with the new address. Google-only users can first set a password in Security. Gmail settings are required for real delivery; without them, development confirmation links appear in the backend terminal.
+
 Run `npm run lint` and `npm run build` from the root to verify the frontend.
 Run `npm test --prefix frontend` for the [confirmation dialog interaction tests](docs/confirmation-dialogs.md), which use mocked API responses.
 

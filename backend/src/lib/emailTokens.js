@@ -7,3 +7,10 @@ export function createToken() {
   const raw = randomBytes(32).toString("hex");
   return { raw, hash: hashToken(raw) };
 }
+
+// Password changes and Google account-ownership claims invalidate pending address changes too.
+export function discardEmailChange(user) {
+  for (const field of ["pendingEmail", "emailChangeFrom", "emailChangeTokenHash", "emailChangeTokenExpires", "emailChangeSentAt"]) {
+    user.set(field, undefined);
+  }
+}

@@ -10,6 +10,7 @@ import { notify } from "../lib/notify.js";
 import { containsRegex, isObjectId, pick } from "../lib/queryHelpers.js";
 import { mePayload, publicUser } from "../lib/userPayload.js";
 import { fileUrl, removeUpload } from "../middlewares/uploadMiddleware.js";
+import { discardEmailChange } from "../lib/emailTokens.js";
 
 //ids (as strings) among `userIds` that the viewer follows
 async function followedIds(viewer, userIds) {
@@ -138,6 +139,7 @@ export async function changePassword(req, res) {
   //a Google-only account has no current password: this is how it sets its first one
   if (user.password && !(await user.comparePassword(current))) throw new ApiError(400, "Current password is incorrect.");
   user.password = String(next ?? "");
+  discardEmailChange(user);
   await user.save(); //minlength is checked before hashing
   res.json({ message: "Password updated." });
 }
