@@ -23,6 +23,7 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage.jsx";
 import AdminSuggestionsPage from "./pages/admin/AdminSuggestionsPage.jsx";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
+import PolicyPage from "./pages/legal/PolicyPage.jsx";
 
 // The UI kit only exists in dev; the lazy import keeps it out of the production bundle.
 const devRoutes = import.meta.env.DEV
@@ -35,6 +36,8 @@ export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
+      { path: "/privacy", element: <PolicyPage type="privacy" /> },
+      { path: "/terms", element: <PolicyPage type="terms" /> },
       {
         element: (
           <GuestOnly>

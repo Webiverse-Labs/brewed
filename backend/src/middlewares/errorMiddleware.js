@@ -10,7 +10,7 @@ export function notFound(req, res) {
 //Express only treats a middleware as an error handler when it declares all 4 params, so keep `next`
 export function errorHandler(err, req, res, next) {
   if (err instanceof ApiError) {
-    return res.status(err.status).json({ message: err.message });
+    return res.status(err.status).json({ message: err.message, ...(err.code ? { code: err.code } : {}) });
   }
 
   //schema validation failed (e.g. rating outside 1–5): join the field messages

@@ -14,7 +14,9 @@ The active item uses the espresso pill style.
 
 | Screen | Route | Figma node | Screenshot | Data needed |
 |---|---|---|---|---|
-| **Sign Up** | `/signup` | `86:2006` | `desktop/01-sign-up.png` | `POST /api/auth/signup` {name, email, password} |
+| **Sign Up** | `/signup` | `86:2006` | `desktop/01-sign-up.png` | `POST /api/auth/signup` {name, email, password, acceptedPolicies: true} |
+| **Privacy Policy** | `/privacy` | — | — | Public policy text, linked from sign-up |
+| **Terms and Conditions** | `/terms` | — | — | Public terms, linked from sign-up |
 | **Log In** | `/login` | `86:2093` | `desktop/02-log-in.png` | `POST /api/auth/login` |
 | **Home** | `/` | `86:2177` | `desktop/03-home.png` | `GET /api/cafes?sort=popular`, `?featured=true`, `?sort=rating`, `?sort=new` |
 | **Café profile** | `/cafes/:id` | `107:15883` | `desktop/04-cafe-detail.png` | `GET /api/cafes/:id`, `GET /api/cafes/:id/logs?public=true` |

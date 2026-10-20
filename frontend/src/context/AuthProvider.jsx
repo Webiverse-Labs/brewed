@@ -48,8 +48,8 @@ function AuthProvider({ children }) {
         return data.user;
       },
       //credential = the ID token from the Google button; resolves to { user, isNew }
-      loginWithGoogle: async (credential) => {
-        const { data } = await api.post("/auth/google", { credential });
+      loginWithGoogle: async (credential, { acceptedPolicies = false } = {}) => {
+        const { data } = await api.post("/auth/google", { credential, acceptedPolicies });
         setUser(data.user);
         return data;
       },

@@ -5,6 +5,7 @@
 import mongoose from "mongoose";
 import User from "../src/models/User.js";
 import { createToken } from "../src/lib/emailTokens.js";
+import { POLICY_VERSION } from "../src/lib/policies.js";
 
 const BASE = process.env.API_URL || "http://localhost:4000";
 const PW = process.env.SEED_PASSWORD;
@@ -57,14 +58,21 @@ check("login with no body -> 401", r.status === 401, JSON.stringify(r));
 // --- auth
 r = await anon("GET", "/api/auth/me");
 check("me logged out -> { user: null }", r.status === 200 && r.body.user === null, JSON.stringify(r));
-r = await newbie("POST", "/api/auth/signup", { name: "Ada Lovelace", email: newEmail, password: "short" });
+for (const acceptedPolicies of [undefined, false, "true", 1]) {
+  r = await newbie("POST", "/api/auth/signup", { name: "Ada Lovelace", email: newEmail, password: PW, acceptedPolicies });
+  check(`signup acceptance ${String(acceptedPolicies)} -> 400`, r.status === 400 && r.body.code === "POLICY_ACCEPTANCE_REQUIRED", JSON.stringify(r));
+}
+r = await newbie("GET", "/api/auth/me");
+check("rejected signup does not start a session", r.body.user === null, JSON.stringify(r));
+r = await newbie("POST", "/api/auth/signup", { name: "Ada Lovelace", email: newEmail, password: "short", acceptedPolicies: true });
 check("signup short password -> 400", r.status === 400 && /8 characters/.test(r.body.message), JSON.stringify(r));
-r = await newbie("POST", "/api/auth/signup", { name: "Ada Lovelace", email: newEmail, password: PW });
+r = await newbie("POST", "/api/auth/signup", { name: "Ada Lovelace", email: newEmail, password: PW, acceptedPolicies: true, policyVersion: "forged", policiesAcceptedAt: "2000-01-01" });
 const r0 = r;
 check("signup -> 201 + user", r.status === 201 && r.body.user?.email === newEmail && !("password" in r.body.user), JSON.stringify(r));
 check("signup derives username", /^ada\./.test(r.body.user?.username ?? ""), r.body.user?.username);
+check("signup response keeps acceptance record private", !["policyVersion", "policiesAcceptedAt"].some((key) => key in (r.body.user ?? {})), JSON.stringify(r));
 const newbieId = r.body.user?.id;
-r = await anon("POST", "/api/auth/signup", { name: "Dup", email: newEmail, password: PW });
+r = await anon("POST", "/api/auth/signup", { name: "Dup", email: newEmail, password: PW, acceptedPolicies: true });
 check("duplicate email -> 409", r.status === 409, JSON.stringify(r));
 r = await anon("POST", "/api/auth/login", { email: { $gt: "" }, password: PW });
 check("NoSQL-injection login -> 401", r.status === 401, JSON.stringify(r));
@@ -78,6 +86,8 @@ check("me has favorites (2)", r.body.user?.favorites?.length === 2, JSON.stringi
 
 // --- email verification + password reset
 await mongoose.connect(process.env.MONGO_URI);
+const acceptance = await User.findById(newbieId).select("+policyVersion +policiesAcceptedAt");
+check("signup stores server policy version and time", acceptance?.policyVersion === POLICY_VERSION && acceptance?.policiesAcceptedAt?.getTime() >= stamp, JSON.stringify(acceptance?.toObject()));
 // stores a token whose raw value we know (only the hash is ever stored); a negative ttl plants an already-expired one
 const plantToken = async (id, kind, ttlMs = 3600e3) => {
   const { raw, hash } = createToken();

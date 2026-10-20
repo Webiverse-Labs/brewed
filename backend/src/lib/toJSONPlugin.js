@@ -1,5 +1,7 @@
 const HIDDEN_FIELDS = [
   "googleId",
+  "policyVersion",
+  "policiesAcceptedAt",
   "sessionsValidAfter",
   "verifyTokenHash",
   "verifyTokenExpires",

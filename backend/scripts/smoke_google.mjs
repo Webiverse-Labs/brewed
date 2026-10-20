@@ -5,6 +5,7 @@
 import { generateKeyPairSync } from "node:crypto";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { POLICY_VERSION } from "../src/lib/policies.js";
 
 const CLIENT_ID = "smoke-test-client.apps.googleusercontent.com";
 process.env.GOOGLE_CLIENT_ID = CLIENT_ID; // before importing the app; dotenv never overrides an existing value
@@ -83,15 +84,27 @@ process.env.GOOGLE_CLIENT_ID = CLIENT_ID;
 // --- brand-new user
 const ada = client();
 const adaToken = idToken({ sub: `sub-ada-${stamp}`, email: email("Ada.G").toUpperCase(), name: "Ada Google" });
-r = await ada("POST", "/api/auth/google", { credential: adaToken });
+for (const acceptedPolicies of [undefined, false, "true", 1]) {
+  r = await ada("POST", "/api/auth/google", { credential: adaToken, acceptedPolicies });
+  check(`new Google account acceptance ${String(acceptedPolicies)} -> 400`, r.status === 400 && r.body.code === "POLICY_ACCEPTANCE_REQUIRED", JSON.stringify(r));
+}
+check("Google account is not created before acceptance", !(await User.exists({ email: email("ada.g") })), "Unexpected account");
+r = await ada("GET", "/api/auth/me");
+check("Google acceptance prompt does not start a session", r.body.user === null, JSON.stringify(r));
+r = await ada("POST", "/api/auth/google", { credential: adaToken, acceptedPolicies: true });
 check("new Google user -> 201, isNew", r.status === 201 && r.body.isNew === true, JSON.stringify(r));
 check("new user: verified, no password, derived username", r.body.user?.emailVerified === true && r.body.user?.hasPassword === false && /^ada\.g/.test(r.body.user?.username), JSON.stringify(r.body.user));
 check("response has no googleId / password / session fields", !["googleId", "password", "sessionsValidAfter"].some((k) => k in (r.body.user ?? {})), JSON.stringify(r.body.user));
 const adaId = r.body.user?.id;
+const acceptance = await User.findById(adaId).select("+policyVersion +policiesAcceptedAt");
+check("Google signup records server policy version and time", acceptance?.policyVersion === POLICY_VERSION && acceptance?.policiesAcceptedAt?.getTime() >= stamp, JSON.stringify(acceptance?.toObject()));
+check("Google response keeps acceptance record private", !["policyVersion", "policiesAcceptedAt"].some((key) => key in (r.body.user ?? {})), JSON.stringify(r));
 r = await ada("GET", "/api/auth/me");
 check("new user is logged in (cookie works)", r.body.user?.id === adaId, JSON.stringify(r.body));
 r = await client()("POST", "/api/auth/google", { credential: adaToken });
 check("same Google user again -> 200, same account", r.status === 200 && r.body.isNew === false && r.body.user?.id === adaId, JSON.stringify(r));
+const repeatAcceptance = await User.findById(adaId).select("+policiesAcceptedAt");
+check("existing Google login leaves acceptance unchanged", repeatAcceptance?.policiesAcceptedAt?.getTime() === acceptance?.policiesAcceptedAt?.getTime());
 r = await client()("POST", "/api/auth/login", { email: email("ada.g"), password: PW });
 check("password login for a Google-only account -> 401 with a hint", r.status === 401 && /Google sign-in/.test(r.body.message), JSON.stringify(r));
 
@@ -110,7 +123,7 @@ check("now the current password is required -> 400", r.status === 400, JSON.stri
 // --- linking an existing VERIFIED account keeps its password
 const verifiedEmail = email("verified");
 const verified = client();
-r = await verified("POST", "/api/auth/signup", { name: "Vera Fied", email: verifiedEmail, password: PW });
+r = await verified("POST", "/api/auth/signup", { name: "Vera Fied", email: verifiedEmail, password: PW, acceptedPolicies: true });
 await User.updateOne({ email: verifiedEmail }, { emailVerified: true });
 r = await client()("POST", "/api/auth/google", { credential: idToken({ sub: `sub-vera-${stamp}`, email: verifiedEmail, name: "Vera" }) });
 check("Google sign-in links an existing verified account", r.status === 200 && r.body.isNew === false, JSON.stringify(r));
@@ -122,7 +135,7 @@ check("verified account's existing session survives", r.body.user?.email === ver
 // --- pre-registered (unverified) account: the takeover case
 const victimEmail = email("victim");
 const attacker = client();
-r = await attacker("POST", "/api/auth/signup", { name: "Mallory", email: victimEmail, password: PW });
+r = await attacker("POST", "/api/auth/signup", { name: "Mallory", email: victimEmail, password: PW, acceptedPolicies: true });
 check("attacker pre-registers the victim's email (unverified)", r.status === 201 && r.body.user?.emailVerified === false, JSON.stringify(r));
 r = await attacker("GET", "/api/auth/me");
 check("attacker's session works before the victim arrives", r.body.user?.email === victimEmail, JSON.stringify(r.body));

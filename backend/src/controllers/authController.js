@@ -5,6 +5,7 @@ import { mePayload } from "../lib/userPayload.js";
 import { createToken, hashToken } from "../lib/emailTokens.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email.js";
 import { verifyGoogleCredential } from "../lib/google.js";
+import { policyAcceptance } from "../lib/policies.js";
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const TOKEN_TTL_MS = { verify: 24 * 60 * 60 * 1000, reset: 60 * 60 * 1000 };
@@ -49,16 +50,18 @@ export async function verifyCredentials(email, password) {
   return user;
 }
 
-//POST /api/auth/signup { name, email, password }
+//POST /api/auth/signup { name, email, password, acceptedPolicies: true }
 export async function signup(req, res) {
   const { name, email, password } = req.body ?? {};
   if (!name || !email || !password) throw new ApiError(400, "Name, email and password are required.");
+  const acceptance = policyAcceptance(req.body.acceptedPolicies);
 
   const user = await User.create({
     name: String(name),
     email: String(email),
     password: String(password),
     username: await uniqueUsername(String(email)),
+    ...acceptance,
   });
 
   //a failed send must not fail the signup; the banner's Resend button covers it
@@ -174,7 +177,7 @@ export async function resetPassword(req, res) {
   res.json({ user: await mePayload(user) });
 }
 
-//POST /api/auth/google { credential } -> the ID token from the "Sign in with Google" button; logs in, links or creates
+//POST /api/auth/google { credential, acceptedPolicies? } -> acceptance is required only when creating an account
 export async function googleSignIn(req, res) {
   const credential = req.body?.credential;
   if (!credential || typeof credential !== "string") throw new ApiError(400, "Missing Google credential.");
@@ -206,6 +209,7 @@ export async function googleSignIn(req, res) {
       await user.save();
     }
   } else {
+    const acceptance = policyAcceptance(req.body.acceptedPolicies);
     isNew = true;
     user = await User.create({
       name: String(profile.name || email.split("@")[0]).slice(0, 80),
@@ -214,6 +218,7 @@ export async function googleSignIn(req, res) {
       googleId: profile.sub,
       emailVerified: true,
       hasPassword: false,
+      ...acceptance,
     });
   }
 

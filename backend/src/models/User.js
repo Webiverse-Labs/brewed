@@ -41,6 +41,9 @@ const userSchema = new mongoose.Schema(
     sessionsValidAfter: { type: Date },
     //unverified users can browse but not post, suggest or follow (requireVerified)
     emailVerified: { type: Boolean, default: false },
+    // Only new registrations record acceptance; never invent acceptance for existing or seeded accounts.
+    policyVersion: { type: String, select: false },
+    policiesAcceptedAt: { type: Date, select: false },
     //only the SHA-256 of each emailed token is stored (see lib/emailTokens.js); *SentAt drives the resend cooldown
     verifyTokenHash: { type: String, select: false },
     verifyTokenExpires: { type: Date, select: false },
