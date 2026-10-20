@@ -91,7 +91,7 @@ function SearchPanel({ onClose, onSuggest, onShowMap }) {
           <button type="button" onClick={() => onShowMap(query.trim())} className="mx-auto mb-3 flex items-center gap-2 rounded-full px-3 py-1 font-medium hover:bg-base-200">
             <Map size={16} /> Explore on the map
           </button>
-          <span className="text-secondary">Can't find your café? </span>
+          <span className="text-secondary">Can't find your favorite café? </span>
           <button type="button" onClick={onSuggest} className="font-medium text-accent hover:underline">
             Suggest a café to be added to Brewed
           </button>

@@ -75,7 +75,7 @@ function LogVisitPage() {
             onClick={openSuggest}
             className="mx-auto flex items-center gap-1.5 text-sm text-accent hover:underline"
           >
-            <Plus size={14} /> Can't find your café? Suggest it to be added.
+            <Plus size={14} /> Can't find your favorite café? Suggest it to be added.
           </button>
         </FormSection>
 
