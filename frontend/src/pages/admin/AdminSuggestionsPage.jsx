@@ -8,14 +8,16 @@ import Modal from "../../components/ui/Modal.jsx";
 import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
-import api, { errorMessage } from "../../lib/api.js";
+import api from "../../lib/api.js";
 import { formatDate } from "../../lib/format.js";
 import { useApi } from "../../hooks/useApi.js";
 import { useMediaQuery } from "../../hooks/useMediaQuery.js";
+import { useConfirmation } from "../../hooks/useConfirmation.js";
 
 const columns = ["Café Name", "Submitted By", "Date", "Status", "Actions"];
 
 function AdminSuggestionsPage() {
+  const confirm = useConfirmation();
   const { data, loading, error, reload, setData } = useApi("/admin/suggestions");
   const [selectedId, setSelectedId] = useState(null);
   const [deciding, setDeciding] = useState(false);
@@ -24,18 +26,29 @@ function AdminSuggestionsPage() {
   const selected = rows.find((s) => s.id === selectedId);
 
   //approving publishes the café and notifies the submitter (server side)
-  const decide = async (suggestion, status) => {
-    setDeciding(true);
-    try {
-      const { data: res } = await api.patch(`/admin/suggestions/${suggestion.id}`, { status });
-      setData((d) => ({ ...d, suggestions: d.suggestions.map((s) => (s.id === suggestion.id ? res.suggestion : s)) }));
-      toast.success(status === "approved" ? `${suggestion.name} approved and published.` : `${suggestion.name} rejected.`);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setDeciding(false);
-    }
-  };
+  const decide = (suggestion, status) => confirm({
+    title: status === "approved" ? "Approve and publish this café?" : "Reject this suggestion?",
+    description: <>
+      <strong className="text-base-content">{suggestion.name}</strong>
+      <p className="mt-3">{status === "approved"
+        ? "This publishes a new café listing and notifies the submitter if their account is available."
+        : "This marks the suggestion as rejected and notifies the submitter if their account is available."}
+        {" "}This decision cannot be changed here.</p>
+    </>,
+    confirmLabel: status === "approved" ? "Approve and Publish" : "Reject Suggestion",
+    pendingLabel: "Saving decision…",
+    danger: status === "rejected",
+    onConfirm: async () => {
+      setDeciding(true);
+      try {
+        const { data: res } = await api.patch(`/admin/suggestions/${suggestion.id}`, { status });
+        setData((d) => d && { ...d, suggestions: d.suggestions.map((s) => (s.id === suggestion.id ? res.suggestion : s)) });
+        toast.success(status === "approved" ? `${suggestion.name} approved and published.` : `${suggestion.name} rejected.`);
+      } finally {
+        setDeciding(false);
+      }
+    },
+  });
 
   const handle = (s) => (s.submittedBy ? `@${s.submittedBy.username}` : "Deleted account");
   const reviewAction = (s) =>

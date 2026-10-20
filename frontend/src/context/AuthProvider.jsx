@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import toast from "react-hot-toast";
-import api, { errorMessage } from "../lib/api.js";
+import api from "../lib/api.js";
 import { AuthContext } from "./authContext.js";
+import { useConfirmation } from "../hooks/useConfirmation.js";
 
 // Holds the logged-in user (from the `token` cookie). `user` is undefined while the first /auth/me check runs,
 // null when logged out, and includes `favorites` and `unreadNotifications`.
 function AuthProvider({ children }) {
+  const confirm = useConfirmation();
   const [user, setUser] = useState(undefined);
 
   const refresh = useCallback(async () => {
@@ -53,20 +54,19 @@ function AuthProvider({ children }) {
         setUser(data.user);
         return data;
       },
-      //only the server can clear the httpOnly cookie, so stay logged in if it didn't answer.
-      //Resolves to false (after telling the user) so callers know not to navigate away.
-      logout: async () => {
-        try {
+      //All user/admin logout entry points share one confirmation. Failures stay in the dialog.
+      logout: () => confirm({
+        title: "Log out of Brewed?",
+        description: "You will need to sign in again to access your account.",
+        confirmLabel: "Log Out",
+        pendingLabel: "Logging out…",
+        onConfirm: async () => {
           await api.post("/auth/logout");
-        } catch (err) {
-          toast.error(errorMessage(err, "Couldn't log out. Check your connection and try again."));
-          return false;
-        }
-        setUser(null);
-        return true;
-      },
+          setUser(null);
+        },
+      }),
     }),
-    [user, refresh],
+    [user, refresh, confirm],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;

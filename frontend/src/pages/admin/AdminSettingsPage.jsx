@@ -9,8 +9,10 @@ import SectionLabel from "../../components/ui/SectionLabel.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
 import api, { errorMessage } from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useConfirmation } from "../../hooks/useConfirmation.js";
 
 function AdminSettingsPage() {
+  const confirm = useConfirmation();
   const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
@@ -18,15 +20,26 @@ function AdminSettingsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const fields = Object.fromEntries(new FormData(e.currentTarget));
-    setSaving(true);
-    try {
-      const { data } = await api.patch("/admin/me", fields);
-      setUser(data.user);
-      toast.success("Settings saved.");
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setSaving(false);
+    const save = async () => {
+      setSaving(true);
+      try {
+        const { data } = await api.patch("/admin/me", fields);
+        setUser(data.user);
+        toast.success("Settings saved.");
+      } finally {
+        setSaving(false);
+      }
+    };
+    if (fields.email.trim().toLowerCase() !== user.email.toLowerCase()) {
+      await confirm({
+        title: "Change your admin email?",
+        description: <>Your sign-in email will change from <strong className="break-all text-base-content">{user.email}</strong> to <strong className="break-all text-base-content">{fields.email}</strong>. Use the new address for future logins.</>,
+        confirmLabel: "Change Email",
+        pendingLabel: "Saving email…",
+        onConfirm: save,
+      });
+    } else {
+      try { await save(); } catch (err) { toast.error(errorMessage(err)); }
     }
   };
 

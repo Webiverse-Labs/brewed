@@ -17,7 +17,17 @@ function AdminLoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { email, password } = Object.fromEntries(new FormData(e.currentTarget));
+    const form = e.currentTarget;
+    const { email, password } = Object.fromEntries(new FormData(form));
+    const missingField = [["email", email], ["password", password]]
+      .find(([, value]) => !String(value ?? "").trim());
+    if (missingField) {
+      toast.error("Please fill out all fields before logging in.", { id: "login-required-fields" });
+      form.elements.namedItem(missingField[0])?.focus();
+      return;
+    }
+    toast.dismiss("login-required-fields");
+    if (!form.reportValidity()) return;
     setSubmitting(true);
     try {
       await login(email, password, { admin: true });
@@ -32,7 +42,7 @@ function AdminLoginPage() {
     <>
       <SectionLabel as="p">Admin Access</SectionLabel>
       <h2 className="mt-1 mb-6 font-display text-2xl font-medium">Dashboard Login</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <Field label="Admin Email">
           <TextInput type="email" name="email" required placeholder="admin@brewed.app" autoComplete="email" />
         </Field>

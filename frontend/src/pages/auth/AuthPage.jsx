@@ -7,10 +7,10 @@ import TextInput from "../../components/ui/TextInput.jsx";
 import PasswordInput from "../../components/ui/PasswordInput.jsx";
 import Button from "../../components/ui/Button.jsx";
 import GoogleButton from "../../components/auth/GoogleButton.jsx";
-import PolicyAgreement from "../../components/auth/PolicyAgreement.jsx";
-import Modal from "../../components/ui/Modal.jsx";
+import PolicyAgreement, { PolicyAgreementText } from "../../components/auth/PolicyAgreement.jsx";
 import { errorMessage } from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useConfirmation } from "../../hooks/useConfirmation.js";
 
 const modes = [
   { value: "signup", label: "Sign Up" },
@@ -22,20 +22,57 @@ function AuthPage() {
   const { pathname, state } = useLocation();
   const navigate = useNavigate();
   const { login, signup, loginWithGoogle } = useAuth();
+  const confirm = useConfirmation();
   const [submitting, setSubmitting] = useState(false);
   const [acceptedPolicies, setAcceptedPolicies] = useState(false);
-  const [pendingGoogleCredential, setPendingGoogleCredential] = useState(null);
-  const [googleAcceptedPolicies, setGoogleAcceptedPolicies] = useState(false);
   const agreementRef = useRef(null);
   const isSignup = pathname === "/signup";
 
+  const acceptPolicies = () => confirm({
+    title: "Accept Brewed's policies?",
+    description: <>
+      Review the links below before continuing. Selecting Accept confirms your agreement.
+      <p className="mt-4"><PolicyAgreementText /></p>
+    </>,
+    confirmLabel: "Accept",
+    onConfirm: () => {
+      setAcceptedPolicies(true);
+      toast.dismiss("signup-policies");
+    },
+  });
+
+  const changeAgreement = (checked) => {
+    if (checked) return acceptPolicies();
+    setAcceptedPolicies(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isSignup && !acceptedPolicies) {
-      agreementRef.current?.reportValidity();
+    const form = e.currentTarget;
+    const { name, email, password } = Object.fromEntries(new FormData(form));
+    const requiredFields = isSignup ? [["name", name], ["email", email], ["password", password]] : [["email", email], ["password", password]];
+    const missingField = requiredFields.find(([, value]) => !String(value ?? "").trim());
+    const reminderId = isSignup ? "signup-required-fields" : "login-required-fields";
+    if (missingField) {
+      toast.error(`Please fill out all fields before ${isSignup ? "signing up" : "logging in"}.`, { id: reminderId });
+      form.elements.namedItem(missingField[0])?.focus();
       return;
     }
-    const { name, email, password } = Object.fromEntries(new FormData(e.currentTarget));
+    toast.dismiss(reminderId);
+    if (isSignup && password.length < 8) {
+      toast.error("Password must be at least 8 characters.", { id: "signup-password-length" });
+      form.elements.namedItem("password")?.focus();
+      return;
+    }
+    toast.dismiss("signup-password-length");
+    if (isSignup && !acceptedPolicies) {
+      toast.error("Please accept the Terms & Privacy Policy.", { id: "signup-policies" });
+      agreementRef.current?.focus();
+      return;
+    }
+    toast.dismiss("signup-policies");
+    // Preserve the remaining browser validation, including email format.
+    if (!form.reportValidity()) return;
     setSubmitting(true);
     try {
       const user = isSignup ? await signup({ name, email, password, acceptedPolicies }) : await login(email, password);
@@ -48,31 +85,35 @@ function AuthPage() {
     }
   };
 
-  const submitGoogle = async (credential, policyAccepted) => {
+  const completeGoogle = async (credential, policyAccepted) => {
+    const { user, isNew } = await loginWithGoogle(credential, { acceptedPolicies: policyAccepted });
+    toast.success(isNew ? "Welcome to Brewed!" : `Welcome back, ${user.name.split(" ")[0]}!`);
+    navigate(state?.from?.pathname ?? "/", { replace: true });
+  };
+
+  const handleGoogle = async (credential) => {
+    if (submitting) return;
+    if (isSignup && !acceptedPolicies && !(await acceptPolicies())) return;
     setSubmitting(true);
     try {
-      const { user, isNew } = await loginWithGoogle(credential, { acceptedPolicies: policyAccepted });
-      toast.success(isNew ? "Welcome to Brewed!" : `Welcome back, ${user.name.split(" ")[0]}!`);
-      navigate(state?.from?.pathname ?? "/", { replace: true });
+      await completeGoogle(credential, isSignup);
     } catch (err) {
       if (err.response?.data?.code === "POLICY_ACCEPTANCE_REQUIRED") {
         // Google also allows new accounts from /login. Ask before creating one there.
-        setPendingGoogleCredential(credential);
-        setGoogleAcceptedPolicies(false);
+        await confirm({
+          title: "Create your Brewed account?",
+          description: "This Google account is new to Brewed. Review and accept the policies before creating an account.",
+          checkboxLabel: <PolicyAgreementText />,
+          confirmLabel: "Accept and Create Account",
+          pendingLabel: "Creating account…",
+          onConfirm: () => completeGoogle(credential, true),
+        });
       } else {
         toast.error(errorMessage(err));
       }
+    } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleGoogle = (credential) => {
-    if (submitting) return;
-    if (isSignup && !acceptedPolicies) {
-      agreementRef.current?.reportValidity();
-      return;
-    }
-    return submitGoogle(credential, isSignup && acceptedPolicies);
   };
 
   return (
@@ -87,7 +128,7 @@ function AuthPage() {
         }}
         className="mb-6"
       />
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         {isSignup && (
           <Field label="Full Name">
             <TextInput name="name" required placeholder="Ada Lovelace" autoComplete="name" />
@@ -114,7 +155,7 @@ function AuthPage() {
         {isSignup && (
           <PolicyAgreement
             checked={acceptedPolicies}
-            onChange={setAcceptedPolicies}
+            onChange={changeAgreement}
             inputRef={agreementRef}
             disabled={submitting}
           />
@@ -140,30 +181,6 @@ function AuthPage() {
           <GoogleButton text={isSignup ? "signup_with" : "signin_with"} onCredential={handleGoogle} />
         </div>
       )}
-      <Modal
-        open={Boolean(pendingGoogleCredential)}
-        onClose={() => {
-          if (!submitting) setPendingGoogleCredential(null);
-        }}
-        title="Create your Brewed account"
-        size="sm"
-      >
-        <p className="mb-5 text-sm leading-relaxed text-secondary">
-          This Google account is new to Brewed. Review our terms and privacy policy before signing up.
-        </p>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (googleAcceptedPolicies && !submitting) submitGoogle(pendingGoogleCredential, true);
-          }}
-          className="flex flex-col gap-5"
-        >
-          <PolicyAgreement checked={googleAcceptedPolicies} onChange={setGoogleAcceptedPolicies} disabled={submitting} />
-          <Button type="submit" block disabled={submitting}>
-            {submitting ? "Please wait…" : "Create Account"}
-          </Button>
-        </form>
-      </Modal>
     </>
   );
 }

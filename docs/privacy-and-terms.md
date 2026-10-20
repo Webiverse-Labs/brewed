@@ -2,6 +2,8 @@
 
 The sign-up form requires an unchecked agreement checkbox before account creation. `/terms` and `/privacy` are public routes, including for signed-out visitors. Links in the agreement open in another tab so entered form data is preserved.
 
+Checking the agreement opens a confirmation dialog. Only Accept checks the form's box; Cancel and Escape leave it unchecked. The first-time Google flow includes the required agreement in its account-creation confirmation. See [confirmation dialogs](confirmation-dialogs.md) for the shared behavior and tests.
+
 Email registration and creation of a new Google account require the literal JSON boolean `acceptedPolicies: true`. Missing, false, string, and numeric values are rejected before creating an account or session. Existing users can continue signing in. A new Google user arriving through `/login` is shown an agreement dialog before their account is created.
 
 The backend records `policyVersion` and `policiesAcceptedAt` on new users. It generates both values itself and excludes them from API responses. Existing and seeded accounts are left without acceptance records; do not backfill a consent date on their behalf.

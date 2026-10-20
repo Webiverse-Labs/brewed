@@ -17,10 +17,12 @@ import Loader from "../../components/ui/Loader.jsx";
 import api, { errorMessage } from "../../lib/api.js";
 import { useApi } from "../../hooks/useApi.js";
 import { useDebounced } from "../../hooks/useDebounced.js";
+import { useConfirmation } from "../../hooks/useConfirmation.js";
 
 const columns = ["Café", "Location", "Rating", "Visits", "Actions"];
 
 function AdminCafesPage() {
+  const confirm = useConfirmation();
   const [query, setQuery] = useState("");
   const q = encodeURIComponent(useDebounced(query.trim()));
   const { data, loading, error, reload, setData } = useApi(`/admin/cafes?q=${q}`);
@@ -43,15 +45,23 @@ function AdminCafesPage() {
     setEditing(target);
   };
 
-  const toggleActive = async (cafe) => {
-    try {
+  const toggleActive = (cafe) => confirm({
+    title: cafe.active ? "Disable this café?" : "Enable this café?",
+    description: <>
+      <strong className="text-base-content">{cafe.name}</strong>
+      <p className="mt-3">{cafe.active
+        ? "This hides the café from discovery. Existing visit records will be kept. You can enable it again later."
+        : "This makes the café visible in discovery again."}</p>
+    </>,
+    confirmLabel: cafe.active ? "Disable Café" : "Enable Café",
+    pendingLabel: "Updating café…",
+    danger: cafe.active,
+    onConfirm: async () => {
       const { data: res } = await api.patch(`/admin/cafes/${cafe.id}`, { active: !cafe.active });
       replaceRow(res.cafe);
       toast.success(`${cafe.name} ${res.cafe.active ? "enabled" : "disabled"}.`);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    }
-  };
+    },
+  });
 
   const save = async (e) => {
     e.preventDefault();

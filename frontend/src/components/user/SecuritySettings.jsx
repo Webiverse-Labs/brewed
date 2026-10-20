@@ -5,10 +5,12 @@ import Field from "../ui/Field.jsx";
 import PasswordInput from "../ui/PasswordInput.jsx";
 import SectionLabel from "../ui/SectionLabel.jsx";
 import Button from "../ui/Button.jsx";
-import api, { errorMessage } from "../../lib/api.js";
+import api from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useConfirmation } from "../../hooks/useConfirmation.js";
 
 function SecuritySettings({ onDeleteAccount }) {
+  const confirm = useConfirmation();
   const { user, updateUser, logout } = useAuth();
   // accounts created with Google have no password yet; this form is how they add one
   const hasPassword = user.hasPassword !== false;
@@ -21,17 +23,25 @@ function SecuritySettings({ onDeleteAccount }) {
     const data = new FormData(form);
     if (data.get("next") !== data.get("confirm")) return toast.error("New passwords don't match.");
 
-    setSaving(true);
-    try {
-      await api.patch("/users/me/password", { current: data.get("current"), next: data.get("next") });
-      updateUser({ hasPassword: true });
-      toast.success(hasPassword ? "Password updated." : "Password set. You can now log in with your email too.");
-      form.reset();
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    await confirm({
+      title: hasPassword ? "Change your password?" : "Set an account password?",
+      description: hasPassword
+        ? "Your current password will be replaced. Use the new password the next time you sign in with your email."
+        : "You will be able to sign in with your email and this password, as well as with Google.",
+      confirmLabel: hasPassword ? "Change Password" : "Set Password",
+      pendingLabel: "Saving password…",
+      onConfirm: async () => {
+        setSaving(true);
+        try {
+          await api.patch("/users/me/password", { current: data.get("current"), next: data.get("next") });
+          updateUser({ hasPassword: true });
+          toast.success(hasPassword ? "Password updated." : "Password set. You can now log in with your email too.");
+          form.reset();
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   };
 
   const handleLogout = async () => {
