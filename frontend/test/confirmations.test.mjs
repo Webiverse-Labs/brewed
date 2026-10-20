@@ -670,3 +670,27 @@ test("new Google account from login requires a checkbox and confirmation before 
   assert.equal(calls[2].acceptedPolicies, true);
   assert.equal(dialog(), null);
 });
+
+
+test("footer displays All rights reserved, policy links, and copies developer email on mail icon click", async () => {
+  const copied = [];
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: async (text) => { copied.push(text); } },
+  });
+  respond = () => ({ cafes: [cafe] });
+  function HomeWithToaster() {
+    return h(React.Fragment, null, h(HomeScreens), h(Toaster));
+  }
+  await mount(HomeWithToaster);
+  const footer = container.querySelector("footer");
+  assert.ok(footer);
+  assert.match(footer.textContent, /© 2026 Webiverse Labs\. All rights reserved\./);
+  assert.ok(footer.querySelector('a[href="/privacy"]'));
+  assert.ok(footer.querySelector('a[href="/terms"]'));
+  const mailBtn = footer.querySelector('button[aria-label="Copy developer team email webiverselabs@gmail.com"]');
+  assert.ok(mailBtn);
+  await click(mailBtn);
+  assert.deepEqual(copied, ["webiverselabs@gmail.com"]);
+  assert.match(container.textContent, /Copied webiverselabs@gmail\.com to clipboard\./);
+});

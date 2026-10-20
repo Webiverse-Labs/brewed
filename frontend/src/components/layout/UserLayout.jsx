@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import UserNavbar from "./UserNavbar.jsx";
 import MobileTabBar from "./MobileTabBar.jsx";
+import Footer from "./Footer.jsx";
 import SearchOverlay from "../cafe/SearchOverlay.jsx";
 import SuggestCafeForm from "../cafe/SuggestCafeForm.jsx";
 import VerifyEmailBanner from "../user/VerifyEmailBanner.jsx";
@@ -39,12 +40,13 @@ function UserLayout() {
   const hasUnread = user.unreadNotifications > 0;
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <UserNavbar hasUnread={hasUnread} />
-      <main className="pb-28 md:pb-16">
+      <main className="flex-1 pb-8 md:pb-12">
         {user.emailVerified === false && <VerifyEmailBanner />}
         <Outlet context={{ openSuggest, openSearch }} />
       </main>
+      <Footer className="pb-20 md:pb-4" />
       <MobileTabBar hasUnread={hasUnread} />
 
       <SearchOverlay open={searchOpen} onClose={closeSearch} onSuggest={openSuggest} onShowMap={showOnMap} />

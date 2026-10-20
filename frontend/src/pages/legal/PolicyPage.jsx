@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Logo from "../../components/ui/Logo.jsx";
+import { CopyDeveloperEmailButton } from "../../components/layout/Footer.jsx";
 
 const policies = {
   privacy: {
@@ -120,9 +121,15 @@ function PolicyPage({ type }) {
           </section>
         </div>
       </main>
-      <footer className="flex gap-5 border-t border-base-300 pt-6 text-sm">
-        <Link to="/signup" className="font-medium text-accent hover:underline">Sign Up</Link>
-        <Link to="/login" className="text-secondary hover:underline">Log In</Link>
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-4 text-[13px] text-secondary">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <CopyDeveloperEmailButton />
+          <span>© 2026 Webiverse Labs. All rights reserved.</span>
+        </div>
+        <div className="flex gap-4">
+          <Link to="/signup" className="font-medium text-accent hover:underline">Sign Up</Link>
+          <Link to="/login" className="text-secondary hover:underline">Log In</Link>
+        </div>
       </footer>
     </div>
   );
