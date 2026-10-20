@@ -49,8 +49,10 @@ function AuthPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
-    const { name, email, password } = Object.fromEntries(new FormData(form));
-    const requiredFields = isSignup ? [["name", name], ["email", email], ["password", password]] : [["email", email], ["password", password]];
+    const { name, email, password, confirmPassword } = Object.fromEntries(new FormData(form));
+    const requiredFields = isSignup
+      ? [["name", name], ["email", email], ["password", password], ["confirmPassword", confirmPassword]]
+      : [["email", email], ["password", password]];
     const missingField = requiredFields.find(([, value]) => !String(value ?? "").trim());
     const reminderId = isSignup ? "signup-required-fields" : "login-required-fields";
     if (missingField) {
@@ -65,6 +67,12 @@ function AuthPage() {
       return;
     }
     toast.dismiss("signup-password-length");
+    if (isSignup && password !== confirmPassword) {
+      toast.error("Passwords don't match.", { id: "signup-password-mismatch" });
+      form.elements.namedItem("confirmPassword")?.focus();
+      return;
+    }
+    toast.dismiss("signup-password-mismatch");
     if (isSignup && !acceptedPolicies) {
       toast.error("Please accept the Terms & Privacy Policy.", { id: "signup-policies" });
       agreementRef.current?.focus();
@@ -152,6 +160,17 @@ function AuthPage() {
             autoComplete={isSignup ? "new-password" : "current-password"}
           />
         </Field>
+        {isSignup && (
+          <Field label="Confirm Password">
+            <PasswordInput
+              name="confirmPassword"
+              required
+              minLength={8}
+              placeholder="Re-enter your password"
+              autoComplete="new-password"
+            />
+          </Field>
+        )}
         {isSignup && (
           <PolicyAgreement
             checked={acceptedPolicies}

@@ -199,6 +199,7 @@ test("signup policy cancellation preserves the form; acceptance checks the box b
   await fill(container.querySelector('[name="email"]'), "new@example.com");
   await fill(container.querySelector('[name="password"]'), "test-password-123");
   const checkbox = container.querySelector('[name="acceptedPolicies"]');
+  await fill(container.querySelector('[name="confirmPassword"]'), "test-password-123");
   await click(checkbox);
   assert.match(dialog().textContent, /Accept Brewed's policies/);
   assert.equal(checkbox.checked, false);
@@ -230,9 +231,13 @@ test("incomplete signup shows one reminder, focuses the missing field, and never
   await click(button("Create Account"));
   assert.equal(document.activeElement, container.querySelector('[name="password"]'));
   assert.equal(signups.length, 0);
+  await fill(container.querySelector('[name="password"]'), "test-password-123");
+  await click(button("Create Account"));
+  assert.equal(document.activeElement, container.querySelector('[name="confirmPassword"]'));
+  assert.equal(signups.length, 0);
   assert.equal([...container.querySelectorAll('[role="status"]')].filter((element) => element.textContent === reminder).length, 1);
   await fill(container.querySelector('[name="name"]'), "   ");
-  await fill(container.querySelector('[name="password"]'), "test-password-123");
+  await fill(container.querySelector('[name="confirmPassword"]'), "test-password-123");
   await click(button("Create Account"));
   assert.equal(document.activeElement, container.querySelector('[name="name"]'));
   assert.equal(signups.length, 0);
@@ -245,6 +250,7 @@ test("custom signup reminder preserves email, password length, and required agre
   await fill(container.querySelector('[name="name"]'), "Test Person");
   await fill(container.querySelector('[name="email"]'), "not-an-email");
   await fill(container.querySelector('[name="password"]'), "test-password-123");
+  await fill(container.querySelector('[name="confirmPassword"]'), "test-password-123");
   await click(container.querySelector('[name="acceptedPolicies"]'));
   await click(button("Accept", dialog()));
   await click(button("Create Account"));
@@ -281,6 +287,7 @@ for (const admin of [false, true]) {
       auth: { login: async (...args) => { logins.push(args); return person; } },
     });
     const submitLabel = admin ? "Access Dashboard" : "Log In";
+    assert.equal(container.querySelector('[name="confirmPassword"]'), null);
     const submitButton = button(submitLabel, container.querySelector("form"));
     const reminder = "Please fill out all fields before logging in.";
     await click(submitButton);
@@ -307,6 +314,7 @@ test("signup shows the password-length popup below eight characters and allows a
   await fill(container.querySelector('[name="name"]'), "Test Person");
   await fill(container.querySelector('[name="email"]'), "new@example.com");
   await fill(container.querySelector('[name="password"]'), "1234567");
+  await fill(container.querySelector('[name="confirmPassword"]'), "1234567");
   await click(button("Create Account"));
   assert.match(container.textContent, /Password must be at least 8 characters/);
   assert.equal(document.activeElement, container.querySelector('[name="password"]'));
@@ -314,11 +322,36 @@ test("signup shows the password-length popup below eight characters and allows a
   assert.equal(signups.length, 0);
   assert.equal([...container.querySelectorAll('[role="status"]')].filter((element) => element.textContent === "Password must be at least 8 characters.").length, 1);
   await fill(container.querySelector('[name="password"]'), "12345678");
+  await fill(container.querySelector('[name="confirmPassword"]'), "12345678");
   await click(container.querySelector('[name="acceptedPolicies"]'));
   await click(button("Accept", dialog()));
   await click(button("Create Account"));
   assert.equal(signups.length, 1);
   assert.equal(signups[0].password, "12345678");
+});
+
+test("signup blocks mismatched passwords and submits only the matching password", async () => {
+  const signups = [];
+  function Signup() { return h(React.Fragment, null, h(AuthPage), h(Toaster)); }
+  await mount(Signup, { path: "/signup", auth: { signup: async (fields) => { signups.push(fields); return person; } } });
+  await fill(container.querySelector('[name="name"]'), "Test Person");
+  await fill(container.querySelector('[name="email"]'), "new@example.com");
+  await fill(container.querySelector('[name="password"]'), "test-password-123");
+  await fill(container.querySelector('[name="confirmPassword"]'), "test-password-124");
+  await click(container.querySelector('[name="acceptedPolicies"]'));
+  await click(button("Accept", dialog()));
+  await click(button("Create Account"));
+  assert.equal(signups.length, 0);
+  assert.match(container.textContent, /Passwords don't match/);
+  assert.equal(document.activeElement, container.querySelector('[name="confirmPassword"]'));
+  await click(button("Create Account"));
+  assert.equal([...container.querySelectorAll('[role="status"]')].filter((element) => element.textContent === "Passwords don't match.").length, 1);
+  await fill(container.querySelector('[name="confirmPassword"]'), "test-password-123 ");
+  await click(button("Create Account"));
+  assert.equal(signups.length, 0, "Password matching must not trim significant characters");
+  await fill(container.querySelector('[name="confirmPassword"]'), "test-password-123");
+  await click(button("Create Account"));
+  assert.deepEqual(signups, [{ name: "Test Person", email: "new@example.com", password: "test-password-123", acceptedPolicies: true }]);
 });
 
 for (const status of ["active", "suspended"]) {
