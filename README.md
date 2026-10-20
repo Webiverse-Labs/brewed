@@ -46,6 +46,16 @@ No frontend `.env.local` file is needed for the default local addresses.
 Run `npm run lint` and `npm run build` from the root to verify the frontend.
 Run `npm test --prefix frontend` for the [confirmation dialog interaction tests](docs/confirmation-dialogs.md), which use mocked API responses.
 
+### Café search and Explore map
+
+The home search opens live café results. **Explore** (`/explore`) shows an interactive Leaflet map using [OpenStreetMap tiles](https://operations.osmfoundation.org/policies/tiles/) with attribution; internet access is required, and no API key is needed. Cafés in the same building share a pin. Cafés without coordinates remain in the list.
+
+Admins can add or edit **Map pin → Latitude / Longitude** under Café Management. Both coordinates are required for a pin; clearing both removes it.
+
+To add the researched North Caloocan locations to existing records, preview with `node backend/scripts/pin-cafes.mjs`, then save with `node backend/scripts/pin-cafes.mjs --apply`. This only fills missing locations when both name and address match [the source dataset](backend/data/cafe-map-locations.json); it preserves existing pins and creates no café records. Eliot's Cafe is left unpinned until its coordinates are confirmed.
+
+Coordinate validation tests: `node --test backend/test/*.test.mjs`. Interaction tests for live search, map pins, filtering, and retry are included in `npm test --prefix frontend`.
+
 ---
 
 ## 🛠️ Tech Stack

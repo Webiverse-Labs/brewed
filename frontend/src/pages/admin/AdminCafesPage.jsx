@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import AdminHeader from "../../components/admin/AdminHeader.jsx";
 import DataTable from "../../components/admin/DataTable.jsx";
 import CafeFields from "../../components/cafe/CafeFields.jsx";
+import CafeLocationFields from "../../components/admin/CafeLocationFields.jsx";
 import CafeImg from "../../components/cafe/CafeImg.jsx";
 import BeanRating from "../../components/ui/BeanRating.jsx";
 import Button from "../../components/ui/Button.jsx";
@@ -171,6 +172,7 @@ function AdminCafesPage() {
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={isNew ? "Add New Café" : "Edit Café"} size="lg">
         <form onSubmit={save} className="flex flex-col gap-4">
           <CafeFields defaults={isNew ? {} : editing} />
+          <CafeLocationFields key={isNew ? "new" : editing?.id} location={isNew ? null : editing?.location} />
           <Field label="Tags" hint="Separate tags with commas">
             <TextInput name="tags" placeholder="Specialty, Micro-roastery…" defaultValue={isNew ? "" : editing?.tags.join(", ")} />
           </Field>

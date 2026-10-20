@@ -32,7 +32,7 @@ function PolicyAgreement({ checked, onChange, inputRef, disabled = false }) {
         disabled={disabled}
         className="checkbox checkbox-primary mt-0.5 size-4 shrink-0 rounded-sm"
       />
-      <label htmlFor={id} className="text-sm leading-relaxed text-secondary">
+      <label htmlFor={id} className="text-xs leading-relaxed text-secondary">
         <PolicyAgreementText />
       </label>
     </div>

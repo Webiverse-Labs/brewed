@@ -34,7 +34,7 @@ function client() {
     }
     const text = await res.text();
     let json; try { json = JSON.parse(text); } catch { json = text; }
-    return { status: res.status, body: json };
+    return { status: res.status, body: json, authCookieIssued: set.some((value) => /^token=[^;]/.test(value)) };
   };
 }
 
@@ -76,6 +76,17 @@ r = await anon("POST", "/api/auth/signup", { name: "Dup", email: newEmail, passw
 check("duplicate email -> 409", r.status === 409, JSON.stringify(r));
 r = await anon("POST", "/api/auth/login", { email: { $gt: "" }, password: PW });
 check("NoSQL-injection login -> 401", r.status === 401, JSON.stringify(r));
+const adminOnUserLogin = client();
+r = await adminOnUserLogin("POST", "/api/auth/login", { email: "admin@brewed.app", password: "wrong-password" });
+check("admin with wrong password on user login -> generic 401", r.status === 401 && r.body.message === "Incorrect email or password." && !r.authCookieIssued, JSON.stringify(r));
+r = await adminOnUserLogin("POST", "/api/auth/login", { email: " ADMIN@BREWED.APP ", password: PW });
+check("admin credentials on user login -> 403 without session cookie", r.status === 403 && /Admin Access/.test(r.body.message) && !r.authCookieIssued && !r.body.user, JSON.stringify(r));
+r = await adminOnUserLogin("POST", "/api/auth/login", { email: "admin@brewed.app", password: PW, admin: true, role: "admin" });
+check("user login cannot be changed to admin login through body fields", r.status === 403 && !r.authCookieIssued, JSON.stringify(r));
+r = await adminOnUserLogin("GET", "/api/auth/me");
+check("rejected admin user-login attempts leave the client signed out", r.body.user === null, JSON.stringify(r));
+r = await adminOnUserLogin("GET", "/api/admin/stats");
+check("rejected admin user-login attempt cannot access admin API", r.status === 401, JSON.stringify(r));
 r = await margot("POST", "/api/auth/login", { email: "margotbrews@example.com", password: "wrong-password" });
 check("wrong password -> 401", r.status === 401, JSON.stringify(r));
 r = await margot("POST", "/api/auth/login", { email: "MargotBrews@example.com", password: PW });
@@ -323,14 +334,27 @@ check("logged out -> 401 on admin route", r.status === 401, JSON.stringify(r));
 r = await client()("POST", "/api/admin/login", { email: "margotbrews@example.com", password: PW });
 check("admin login as regular user -> 403", r.status === 403, JSON.stringify(r));
 r = await admin("POST", "/api/admin/login", { email: "admin@brewed.app", password: PW });
-check("admin login", r.status === 200 && r.body.user?.role === "admin", JSON.stringify(r));
+check("admin login", r.status === 200 && r.body.user?.role === "admin" && r.authCookieIssued, JSON.stringify(r));
 r = await admin("GET", "/api/admin/stats");
 check("stats counts", r.body.stats?.cafes === 8 && r.body.stats?.users === 5 && r.body.stats?.pendingSuggestions === 3, JSON.stringify(r.body.stats));
 check("stats recent lists", r.body.recentSuggestions?.length === 3 && r.body.recentUsers?.length === 4, JSON.stringify(r.body).slice(0, 200));
-fd = new FormData(); fd.set("name", "Admin Added Café"); fd.set("address", "9 Sample Rd, Kapitolyo, Pasig City"); fd.set("tags", "Specialty, Micro-roastery"); fd.append("photos", imageBlob(), "c.png");
+fd = new FormData(); fd.set("name", "Admin Added Café"); fd.set("address", "9 Sample Rd, Kapitolyo, Pasig City"); fd.set("tags", "Specialty, Micro-roastery"); fd.set("latitude", "14.75"); fd.set("longitude", "121.02"); fd.append("photos", imageBlob(), "c.png");
 r = await admin("POST", "/api/admin/cafes", undefined, { form: fd });
 check("admin creates café (area + tags derived)", r.status === 201 && r.body.cafe?.area === "Kapitolyo, Pasig City" && r.body.cafe?.tags?.length === 2 && r.body.cafe?.photo, JSON.stringify(r));
 const newCafeId = r.body.cafe?.id;
+check("admin saves multipart map coordinates", r.body.cafe?.location?.lat === 14.75 && r.body.cafe?.location?.lng === 121.02, JSON.stringify(r));
+r = await anon("GET", `/api/cafes/${newCafeId}`);
+check("public café includes its map location", r.body.cafe?.location?.lat === 14.75, JSON.stringify(r));
+r = await admin("PATCH", `/api/admin/cafes/${newCafeId}`, { latitude: 91, longitude: 121 });
+check("out-of-range location rejected", r.status === 400, JSON.stringify(r));
+r = await admin("PATCH", `/api/admin/cafes/${newCafeId}`, { latitude: 14 });
+check("partial location rejected", r.status === 400, JSON.stringify(r));
+r = await admin("PATCH", `/api/admin/cafes/${newCafeId}`, { description: "Preserve pin" });
+check("unrelated café edits preserve the pin", r.body.cafe?.location?.lat === 14.75, JSON.stringify(r));
+r = await admin("PATCH", `/api/admin/cafes/${newCafeId}`, { latitude: "", longitude: "" });
+check("blank coordinate pair removes a pin", r.body.cafe?.location === null, JSON.stringify(r));
+r = await admin("PATCH", `/api/admin/cafes/${newCafeId}`, { latitude: 0, longitude: 0 });
+check("JSON coordinates including zero are supported", r.body.cafe?.location?.lat === 0 && r.body.cafe?.location?.lng === 0, JSON.stringify(r));
 r = await admin("PATCH", `/api/admin/cafes/${blue.id}`, { hours: "Daily 6 am – 10 pm" });
 check("admin edits hours", r.body.cafe?.hours === "Daily 6 am – 10 pm", JSON.stringify(r));
 r = await margot("GET", "/api/notifications?type=cafe_update");
@@ -378,6 +402,28 @@ r = await anon("GET", `/api/cafes/${onyx.id}`);
 check("deleting account refreshes café stats (Onyx back to 2)", r.body.cafe?.visits === 2, JSON.stringify(r.body.cafe?.visits));
 r = await admin("GET", "/api/admin/suggestions");
 check("suggestion from deleted user shows null submitter", r.body.suggestions?.some((s) => s.submittedBy === null), "none null");
+
+// Admin recovery changes only this throwaway database's seeded account, after all other admin scenarios.
+const recoveredAdmin = client();
+const adminAccount = await User.findOne({ email: "admin@brewed.app" });
+const adminResetToken = await plantToken(adminAccount._id, "reset");
+const adminNewPassword = "recovered-admin-test-password";
+r = await recoveredAdmin("POST", "/api/auth/reset-password", { token: adminResetToken, password: adminNewPassword });
+check("admin password reset requires Admin Access without creating a session", r.status === 200 && r.body.adminLoginRequired === true && !r.body.user && !r.authCookieIssued, JSON.stringify(r));
+r = await recoveredAdmin("GET", "/api/auth/me");
+check("admin reset leaves client signed out", r.body.user === null, JSON.stringify(r));
+r = await recoveredAdmin("GET", "/api/admin/stats");
+check("admin reset alone cannot access admin API", r.status === 401, JSON.stringify(r));
+r = await recoveredAdmin("POST", "/api/auth/reset-password", { token: adminResetToken, password: adminNewPassword });
+check("admin reset token is still single-use", r.status === 400, JSON.stringify(r));
+r = await recoveredAdmin("POST", "/api/auth/login", { email: "admin@brewed.app", password: adminNewPassword });
+check("recovered admin password is refused on user login", r.status === 403 && !r.authCookieIssued, JSON.stringify(r));
+r = await recoveredAdmin("POST", "/api/admin/login", { email: "admin@brewed.app", password: PW });
+check("old admin password is invalid after recovery", r.status === 401, JSON.stringify(r));
+r = await recoveredAdmin("POST", "/api/admin/login", { email: "admin@brewed.app", password: adminNewPassword });
+check("recovered admin signs in through Admin Access", r.status === 200 && r.body.user?.role === "admin" && r.authCookieIssued, JSON.stringify(r));
+r = await recoveredAdmin("GET", "/api/admin/stats");
+check("Admin Access creates a working admin session after recovery", r.status === 200, JSON.stringify(r));
 
 console.log(results.join("\n"));
 console.log(`\n${pass} passed, ${fail} failed`);

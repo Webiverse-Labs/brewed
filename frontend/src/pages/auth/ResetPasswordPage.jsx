@@ -9,7 +9,7 @@ import api, { errorMessage } from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useEmailLinkToken } from "../../hooks/useEmailLinkToken.js";
 
-// Landing page of the link in the reset email. A successful reset also logs the user in.
+// A successful reset signs regular users in; administrators must sign in through Admin Access.
 function ResetPasswordPage() {
   const token = useEmailLinkToken();
   const navigate = useNavigate();
@@ -23,6 +23,12 @@ function ResetPasswordPage() {
     setSubmitting(true);
     try {
       const { data } = await api.post("/auth/reset-password", { token, password });
+      if (data.adminLoginRequired) {
+        setUser(null);
+        toast.success(data.message);
+        navigate("/admin/login", { replace: true });
+        return;
+      }
       setUser(data.user);
       toast.success("Password updated. You're logged in.");
       navigate(data.user.role === "admin" ? "/admin" : "/", { replace: true });
@@ -48,7 +54,7 @@ function ResetPasswordPage() {
         </>
       ) : (
         <>
-          <p className="mb-6 text-[15px] text-secondary">You'll be logged in once it's saved.</p>
+          <p className="mb-6 text-[15px] text-secondary">Save your new password to continue.</p>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Field label="New Password" hint="At least 8 characters">
               <PasswordInput name="password" required minLength={8} placeholder="Create a password" autoComplete="new-password" />

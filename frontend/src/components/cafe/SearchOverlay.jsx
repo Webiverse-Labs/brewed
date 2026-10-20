@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Map, Search, X } from "lucide-react";
 import CompactCafeRow from "./CompactCafeRow.jsx";
 import BookmarkBtn from "../ui/BookmarkBtn.jsx";
 import LoadError from "../ui/LoadError.jsx";
@@ -7,44 +7,54 @@ import Loader from "../ui/Loader.jsx";
 import { useApi } from "../../hooks/useApi.js";
 import { useDebounced } from "../../hooks/useDebounced.js";
 
-// Explore panel. Rendered by UserLayout; the inner panel remounts on every open so the query resets.
-function SearchOverlay({ open, onClose, onSuggest }) {
+// Live café search, opened from Home. Explore has its own map route.
+function SearchOverlay({ open, onClose, onSuggest, onShowMap }) {
   if (!open) return null;
-  return <SearchPanel onClose={onClose} onSuggest={onSuggest} />;
+  return <SearchPanel onClose={onClose} onSuggest={onSuggest} onShowMap={onShowMap} />;
 }
 
-function SearchPanel({ onClose, onSuggest }) {
+function SearchPanel({ onClose, onSuggest, onShowMap }) {
   const [query, setQuery] = useState("");
+  const dialogRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
+    const dialog = dialogRef.current;
+    dialog.showModal();
+    inputRef.current.focus();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("keydown", onKey);
+      dialog.close();
       document.body.style.overflow = overflow;
     };
-  }, [onClose]);
+  }, []);
 
   // typing waits 250 ms before searching
   const q = encodeURIComponent(useDebounced(query.trim()));
   const search = useApi(`/cafes?q=${q}&limit=20`);
-  const results = search.data?.cafes ?? [];
+  const results = search.loading ? [] : search.data?.cafes ?? [];
   const empty = !search.loading && !search.error && results.length === 0;
 
   return (
-    <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Explore">
-      <button type="button" aria-label="Close search" onClick={onClose} className="absolute inset-0 bg-primary/20" />
+    <dialog
+      ref={dialogRef} role="dialog" aria-modal="true" aria-label="Search cafés"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      className="fixed inset-0 z-40 m-0 h-dvh max-h-none w-screen max-w-none bg-transparent p-0 text-base-content outline-none backdrop:bg-primary/20"
+    >
+      <button type="button" aria-label="Close search" onClick={onClose} className="absolute inset-0" />
 
       <div className="relative mx-auto flex h-full flex-col overflow-hidden bg-base-100 md:mt-[78px] md:h-auto md:max-h-[calc(100vh-110px)] md:w-[680px] md:rounded-3xl md:shadow-float">
         <div className="flex h-15 shrink-0 items-center gap-3 border-b border-base-300 px-5 md:px-6">
           <Search size={18} className="shrink-0 text-secondary" />
           <input
             autoFocus
+            ref={inputRef}
+            type="search"
+            name="q"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search cafés by name, city, or type…"
+            placeholder="Search cafés by name, area, or type…"
             aria-label="Search"
             className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
           />
@@ -78,13 +88,16 @@ function SearchPanel({ onClose, onSuggest }) {
         </div>
 
         <div className="shrink-0 border-t border-base-300 px-6 py-4 text-center text-sm">
+          <button type="button" onClick={() => onShowMap(query.trim())} className="mx-auto mb-3 flex items-center gap-2 rounded-full px-3 py-1 font-medium hover:bg-base-200">
+            <Map size={16} /> Explore on the map
+          </button>
           <span className="text-secondary">Can't find your café? </span>
           <button type="button" onClick={onSuggest} className="font-medium text-accent hover:underline">
             Suggest a café to be added to Brewed
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
 

@@ -80,6 +80,7 @@ export async function signup(req, res) {
 export async function login(req, res) {
   const { email, password } = req.body ?? {};
   const user = await verifyCredentials(email, password);
+  if (user.role === "admin") throw new ApiError(403, "Please use Admin Access to sign in.");
   setAuthCookie(res, user._id);
   res.json({ user: await mePayload(user) });
 }
@@ -145,7 +146,7 @@ export async function forgotPassword(req, res) {
   res.json({ message: "If an account exists for that email, we've sent a link to reset the password." });
 }
 
-//POST /api/auth/reset-password { token, password } -> sets the password and logs the user in
+//POST /api/auth/reset-password { token, password } -> admins return to Admin Access; users are signed in
 export async function resetPassword(req, res) {
   const { token, password } = req.body ?? {};
   if (!password) throw new ApiError(400, "Enter a new password.");
@@ -173,6 +174,10 @@ export async function resetPassword(req, res) {
   if (!claimed.modifiedCount) throw invalidLink;
   await user.save();
 
+  if (user.role === "admin") {
+    clearAuthCookie(res);
+    return res.json({ adminLoginRequired: true, message: "Password updated. Sign in through Admin Access." });
+  }
   setAuthCookie(res, user._id);
   res.json({ user: await mePayload(user) });
 }

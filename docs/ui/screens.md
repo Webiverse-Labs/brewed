@@ -19,6 +19,7 @@ The active item uses the espresso pill style.
 | **Terms and Conditions** | `/terms` | — | — | Public terms, linked from sign-up |
 | **Log In** | `/login` | `86:2093` | `desktop/02-log-in.png` | `POST /api/auth/login` |
 | **Home** | `/` | `86:2177` | `desktop/03-home.png` | `GET /api/cafes?sort=popular`, `?featured=true`, `?sort=rating`, `?sort=new` |
+| **Explore map** *(added)* | `/explore?q=` | — | — | `GET /api/cafes?q=&limit=100`; Leaflet map with saved café coordinates, shared-location pins, café details and search filtering |
 | **Café profile** | `/cafes/:id` | `107:15883` | `desktop/04-cafe-detail.png` | `GET /api/cafes/:id`, `GET /api/cafes/:id/logs?public=true` |
 | **Log a Visit** | `/log` | `89:6733` | `desktop/08-log-review.png` | `GET /api/cafes?q=` (café search), `POST /api/logs` |
 | ↳ state: review + item added | | `172:2112` | `desktop/09-log-review-with-item.png` | |
@@ -40,10 +41,10 @@ The active item uses the espresso pill style.
 
 | Overlay | Opened from | Figma node | Screenshot | Notes |
 |---|---|---|---|---|
-| **Explore / search panel** | Navbar "Explore" | `89:10932` | `desktop/06-explore-search.png` | Café results. Same backdrop as modals |
+| **Café search panel** | Home search bar and "See all" | `89:10932` | `desktop/06-explore-search.png` | Live café results and "Explore on the map". Native modal dialog with keyboard focus |
 | ↳ with tabs (Cafés / Coffee Drinkers) | | `89:10930` | — | The tabs version is the latest. Build the tabs |
 | ↳ Coffee Drinkers tab | | `89:13926` *(hidden frame)* | — | User rows with Follow / Following button → `GET /api/users?q=`, `POST /api/users/:id/follow` |
-| **Suggest a Café** modal | Explore footer, Log a Visit "Can't find your café?" | `112:19512` (card only), `112:19562` (over a page) | `desktop/05-suggest-cafe-modal.png`, `desktop/07-suggest-cafe-over-page.png` | `POST /api/suggestions` (multipart, optional photo) |
+| **Suggest a Café** modal | Search footer, Explore map list, Log a Visit "Can't find your café?" | `112:19512` (card only), `112:19562` (over a page) | `desktop/05-suggest-cafe-modal.png`, `desktop/07-suggest-cafe-over-page.png` | `POST /api/suggestions` (multipart, optional photo) |
 | **Profile menu** | Navbar "Profile" | `89:15285` | — | 192 × 134 dropdown: Profile · Settings · Log Out |
 
 ### Log a Visit behavior

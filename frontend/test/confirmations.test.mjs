@@ -5,7 +5,7 @@ import { Window } from "happy-dom";
 
 // No API or database is contacted. These tests exercise rendered forms, dialogs, and their real handlers.
 const browser = new Window({ url: "http://localhost:5173", settings: { disableJavaScriptFileLoading: true, disableCSSFileLoading: true, handleDisabledFileLoadingAsSuccess: true } });
-for (const name of ["window", "document", "navigator", "HTMLElement", "HTMLDialogElement", "Event", "MouseEvent", "FormData", "MutationObserver"]) {
+for (const name of ["window", "document", "navigator", "Element", "HTMLElement", "HTMLDialogElement", "Event", "MouseEvent", "FormData", "MutationObserver"]) {
   Object.defineProperty(globalThis, name, { configurable: true, value: name === "window" ? browser : browser[name] });
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -14,12 +14,13 @@ const React = await import("react");
 const { act, createElement: h } = React;
 const { createRoot } = await import("react-dom/client");
 const { default: toast, Toaster } = await import("react-hot-toast");
-const { MemoryRouter, useNavigate } = await import("react-router-dom");
+const { MemoryRouter, Routes, Route, useNavigate } = await import("react-router-dom");
 const { createServer } = await import("vite");
 const { default: react } = await import("@vitejs/plugin-react");
 
 let vite, root, container, ConfirmationProvider, useConfirmation, AuthContext, AuthProvider, api;
-let AuthPage, AdminLoginPage, AdminUsersPage, AdminCafesPage, AdminSuggestionsPage, UserSettingsPage, SecuritySettings, AdminSettingsPage;
+let AuthPage, AdminLoginPage, ResetPasswordPage, AdminUsersPage, AdminCafesPage, AdminSuggestionsPage, UserSettingsPage, SecuritySettings, AdminSettingsPage;
+let HomePage, UserLayout, ExplorePage;
 let ask, navigate;
 const requests = [];
 const person = { id: "user-1", name: "Test User", username: "testuser", email: "test@example.com", status: "active", hasPassword: true, emailVerified: true, visits: 0, favorites: [], createdAt: "2026-10-20T00:00:00Z" };
@@ -42,12 +43,16 @@ before(async () => {
   ({ default: api } = await load("lib/api.js"));
   ({ default: AuthPage } = await load("pages/auth/AuthPage.jsx"));
   ({ default: AdminLoginPage } = await load("pages/admin/AdminLoginPage.jsx"));
+  ({ default: ResetPasswordPage } = await load("pages/auth/ResetPasswordPage.jsx"));
   ({ default: AdminUsersPage } = await load("pages/admin/AdminUsersPage.jsx"));
   ({ default: AdminCafesPage } = await load("pages/admin/AdminCafesPage.jsx"));
   ({ default: AdminSuggestionsPage } = await load("pages/admin/AdminSuggestionsPage.jsx"));
   ({ default: UserSettingsPage } = await load("pages/user/UserSettingsPage.jsx"));
   ({ default: SecuritySettings } = await load("components/user/SecuritySettings.jsx"));
   ({ default: AdminSettingsPage } = await load("pages/admin/AdminSettingsPage.jsx"));
+  ({ default: HomePage } = await load("pages/user/HomePage.jsx"));
+  ({ default: UserLayout } = await load("components/layout/UserLayout.jsx"));
+  ({ default: ExplorePage } = await load("pages/user/ExplorePage.jsx"));
   api.defaults.adapter = async (config) => {
     requests.push({ method: config.method, url: config.url, data: typeof config.data === "string" ? JSON.parse(config.data) : config.data });
     if (!respond) throw new Error(`Unexpected API request: ${config.method} ${config.url}`);
@@ -453,6 +458,65 @@ test("all logout callers use the shared auth confirmation", async () => {
   assert.ok(button("Logged Out"));
 });
 
+test("admin credentials show the user-login error and authenticate only through Admin Access", async () => {
+  const { useAuth } = await vite.ssrLoadModule("/src/hooks/useAuth.js");
+  function SessionRole() {
+    const { user } = useAuth();
+    return h("output", { id: "session-role" }, user?.role ?? "signed-out");
+  }
+  function Screens() {
+    return h(React.Fragment, null, h(SessionRole), h(Routes, null,
+      h(Route, { path: "/login", element: h(AuthPage) }),
+      h(Route, { path: "/admin/login", element: h(AdminLoginPage) }),
+      h(Route, { path: "/admin", element: h("p", null, "Admin dashboard") }),
+    ), h(Toaster));
+  }
+  respond = (config) => {
+    if (config.url === "/auth/me") return { user: null };
+    if (config.url === "/auth/login") {
+      throw Object.assign(new Error("Admin Access required"), { response: { status: 403, data: { message: "Please use Admin Access to sign in." } } });
+    }
+    assert.equal(config.url, "/admin/login");
+    return { user: { ...person, role: "admin" } };
+  };
+  await mount(Screens, { path: "/login", actualAuth: true });
+  await fill(container.querySelector('[name="email"]'), "admin@example.com");
+  await fill(container.querySelector('[name="password"]'), "test-admin-password");
+  await click(button("Log In", container.querySelector("form")));
+  assert.match(container.textContent, /Please use Admin Access to sign in/);
+  assert.equal(container.querySelector("#session-role").textContent, "signed-out");
+  assert.deepEqual(mutations().map((request) => request.url), ["/auth/login"]);
+  await act(async () => navigate("/admin/login"));
+  await fill(container.querySelector('[name="email"]'), "admin@example.com");
+  await fill(container.querySelector('[name="password"]'), "test-admin-password");
+  await click(button("Access Dashboard"));
+  assert.equal(container.querySelector("#session-role").textContent, "admin");
+  assert.match(container.textContent, /Admin dashboard/);
+  assert.deepEqual(mutations().map((request) => request.url), ["/auth/login", "/admin/login"]);
+});
+
+for (const admin of [true, false]) {
+  test(`${admin ? "admin" : "user"} password recovery follows the correct login flow`, async () => {
+    const updates = [];
+    function Screens() {
+      return h(React.Fragment, null, h(Routes, null,
+        h(Route, { path: "/reset-password", element: h(ResetPasswordPage) }),
+        h(Route, { path: "/admin/login", element: h("p", null, "Admin Access login") }),
+        h(Route, { path: "/", element: h("p", null, "User home") }),
+      ), h(Toaster));
+    }
+    respond = () => admin
+      ? { adminLoginRequired: true, message: "Password updated. Sign in through Admin Access." }
+      : { user: person };
+    await mount(Screens, { path: "/reset-password#token=test-only-reset", auth: { setUser: (user) => updates.push(user) } });
+    await fill(container.querySelector('[name="password"]'), "new-test-password");
+    await click(button("Save Password"));
+    assert.deepEqual(mutations(), [{ method: "post", url: "/auth/reset-password", data: { token: "test-only-reset", password: "new-test-password" } }]);
+    assert.deepEqual(updates, admin ? [null] : [person]);
+    assert.match(container.textContent, admin ? /Admin Access login/ : /User home/);
+  });
+}
+
 function installGoogleStub() {
   let receive;
   browser.google = { accounts: { id: {
@@ -466,6 +530,121 @@ function installGoogleStub() {
     },
   } } };
 }
+
+function HomeScreens() {
+  return h(Routes, null, h(Route, { element: h(UserLayout) },
+    h(Route, { path: "/", element: h(HomePage) }),
+    h(Route, { path: "/explore", element: h(ExplorePage) }),
+    h(Route, { path: "/cafes/:id", element: h("p", { id: "cafe-detail" }, "Café details") }),
+  ));
+}
+
+const searchPanel = () => container.querySelector('[role="dialog"][aria-label="Search cafés"]');
+const settleSearch = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
+
+test("home search opens live results and searches trimmed, encoded text without submitting", async () => {
+  const query = "Café & Tea";
+  const searchPath = `/cafes?q=${encodeURIComponent(query)}&limit=20`;
+  respond = (config) => ({ cafes: [{ ...cafe, name: config.url === searchPath ? query : cafe.name }] });
+  await mount(HomeScreens);
+  await click(container.querySelector('button[aria-label="Search cafés"]'));
+  const panel = searchPanel();
+  assert.ok(panel);
+  assert.equal(panel.open, true);
+  assert.equal(document.activeElement, panel.querySelector("input"));
+  await fill(panel.querySelector("input"), `  ${query}  `);
+  await settleSearch();
+  assert.equal(requests.filter((request) => request.url === searchPath).length, 1);
+  const match = panel.querySelector(`a[href="/cafes/${cafe.id}"]`);
+  assert.match(match.textContent, /Café & Tea/);
+  await click(match);
+  assert.ok(container.querySelector("#cafe-detail"));
+  assert.equal(searchPanel(), null);
+});
+
+test("home search shows no matches, refines results, and can be cancelled with Escape", async () => {
+  respond = (config) => ({ cafes: config.url === "/cafes?q=missing&limit=20" ? [] : [cafe] });
+  await mount(HomeScreens);
+  await click(container.querySelector('button[aria-label="Search cafés"]'));
+  const panel = searchPanel();
+  await fill(panel.querySelector("input"), "missing");
+  await settleSearch();
+  assert.match(panel.textContent, /No cafés match “missing”/);
+  await fill(panel.querySelector("input"), "Test");
+  await settleSearch();
+  assert.ok(requests.some((request) => request.url === "/cafes?q=Test&limit=20"));
+  assert.ok(panel.querySelector(`a[href="/cafes/${cafe.id}"]`));
+  await act(async () => panel.dispatchEvent(new browser.Event("cancel", { cancelable: true })));
+  assert.equal(searchPanel(), null);
+});
+
+test("See all opens blank search and Explore opens the map page", async () => {
+  respond = () => ({ cafes: [cafe] });
+  await mount(HomeScreens);
+  await click(container.querySelector('button[aria-label="Search cafés"]'));
+  assert.equal(searchPanel().querySelector("input").value, "");
+  assert.ok(requests.some((request) => request.url === "/cafes?q=&limit=20"));
+  await fill(searchPanel().querySelector("input"), "Test");
+  await click(searchPanel().querySelector('[aria-label="Close search"]'));
+  await click(button("See all"));
+  assert.equal(searchPanel().querySelector("input").value, "");
+  await click(searchPanel().querySelector('[aria-label="Close search"]'));
+  await click(container.querySelector('a[href="/explore"]'));
+  assert.match(container.querySelector("h1").textContent, /Explore cafés/);
+  assert.equal(searchPanel(), null);
+  assert.ok(container.querySelector('[aria-label="Café locations map"]'));
+});
+
+test("map pins group shared locations, select café details, and retain unlocated cafés in the list", async () => {
+  const located = { ...cafe, address: "Test address", location: { lat: 14.75, lng: 121.02 } };
+  const neighbor = { ...located, id: "cafe-2", name: "Neighbor Café" };
+  respond = () => ({ cafes: [located, neighbor, { ...cafe, id: "cafe-3", name: "Unlocated Café" }] });
+  await mount(HomeScreens, { path: "/explore" });
+  const pins = container.querySelectorAll(".brewed-map-pin");
+  assert.equal(pins.length, 1);
+  assert.equal(pins[0].textContent, "2");
+  assert.match(container.textContent, /Location not yet pinned/);
+  await click(pins[0]);
+  const choices = container.querySelector(".cafe-map-choices");
+  assert.ok(choices);
+  await click(button("Neighbor Café", choices));
+  const details = container.querySelector('[aria-live="polite"]');
+  assert.match(details.textContent, /Neighbor Café/);
+  assert.equal(details.querySelector("a").getAttribute("href"), "/cafes/cafe-2");
+  const popupLink = choices.querySelector('a[href="/cafes/cafe-2"]');
+  assert.ok(popupLink);
+  await click(button("Show all pins"));
+  await click(popupLink);
+  assert.ok(container.querySelector("#cafe-detail"));
+});
+
+test("search can open filtered map results; map filtering handles empty results and API retry", async () => {
+  let failed = false;
+  respond = (config) => {
+    if (failed) throw Object.assign(new Error("Offline"), { response: { status: 503, data: { message: "Cafés unavailable" } } });
+    return { cafes: config.url.includes("q=missing") ? [] : [cafe] };
+  };
+  await mount(HomeScreens);
+  await click(container.querySelector('button[aria-label="Search cafés"]'));
+  await fill(searchPanel().querySelector("input"), "Test");
+  await settleSearch();
+  await click(button("Explore on the map", searchPanel()));
+  assert.equal(searchPanel(), null);
+  assert.equal(container.querySelector('[aria-label="Filter cafés on map"]').value, "Test");
+  assert.ok(requests.some((request) => request.url === "/cafes?q=Test&limit=100"));
+  await fill(container.querySelector('[aria-label="Filter cafés on map"]'), "missing");
+  await settleSearch();
+  assert.match(container.textContent, /No cafés match “missing”/);
+  assert.equal(container.querySelectorAll(".brewed-map-pin").length, 0);
+  failed = true;
+  await fill(container.querySelector('[aria-label="Filter cafés on map"]'), "Test");
+  await settleSearch();
+  assert.match(container.textContent, /Cafés unavailable/);
+  failed = false;
+  await click(button("Try again"));
+  assert.ok(container.querySelector('[aria-label="Café locations map"]'));
+  assert.match(container.textContent, /Test Café/);
+});
 
 test("new Google account from login requires a checkbox and confirmation before creating the account", async () => {
   const calls = [];
