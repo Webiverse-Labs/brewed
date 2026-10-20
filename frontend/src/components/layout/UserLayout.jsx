@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import UserNavbar from "./UserNavbar.jsx";
 import MobileTabBar from "./MobileTabBar.jsx";
 import SearchOverlay from "../cafe/SearchOverlay.jsx";
@@ -9,25 +9,29 @@ import Modal from "../ui/Modal.jsx";
 import { useAuth } from "../../hooks/useAuth.js";
 
 // Signed-in shell. Pages reach the shared overlays through useOutletContext():
-//   const { openSuggest, openExplore } = useOutletContext();
+//   const { openSuggest, openSearch } = useOutletContext();
 function UserLayout() {
-  const [exploreOpen, setExploreOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const navigate = useNavigate();
 
-  // any navigation (navbar link, back/forward) closes Explore. Reset during render, not in an effect,
+  // Any navigation closes search. Reset during render, not in an effect,
   // so the new page never paints with the panel still on top
   const { key: locationKey } = useLocation();
   const [prevLocationKey, setPrevLocationKey] = useState(locationKey);
   if (locationKey !== prevLocationKey) {
     setPrevLocationKey(locationKey);
-    setExploreOpen(false);
+    setSearchOpen(false);
   }
 
-  const toggleExplore = useCallback(() => setExploreOpen((o) => !o), []);
-  const openExplore = useCallback(() => setExploreOpen(true), []);
-  const closeExplore = useCallback(() => setExploreOpen(false), []);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+  const showOnMap = useCallback((query) => {
+    setSearchOpen(false);
+    navigate(`/explore${query ? `?q=${encodeURIComponent(query)}` : ""}`);
+  }, [navigate]);
   const openSuggest = useCallback(() => {
-    setExploreOpen(false);
+    setSearchOpen(false);
     setSuggestOpen(true);
   }, []);
 
@@ -36,14 +40,14 @@ function UserLayout() {
 
   return (
     <div className="min-h-screen">
-      <UserNavbar exploreOpen={exploreOpen} onExplore={toggleExplore} hasUnread={hasUnread} />
+      <UserNavbar hasUnread={hasUnread} />
       <main className="pb-28 md:pb-16">
         {user.emailVerified === false && <VerifyEmailBanner />}
-        <Outlet context={{ openSuggest, openExplore }} />
+        <Outlet context={{ openSuggest, openSearch }} />
       </main>
-      <MobileTabBar exploreOpen={exploreOpen} onExplore={toggleExplore} hasUnread={hasUnread} />
+      <MobileTabBar hasUnread={hasUnread} />
 
-      <SearchOverlay open={exploreOpen} onClose={closeExplore} onSuggest={openSuggest} />
+      <SearchOverlay open={searchOpen} onClose={closeSearch} onSuggest={openSuggest} onShowMap={showOnMap} />
       <Modal open={suggestOpen} onClose={() => setSuggestOpen(false)} title="Suggest a Café">
         <SuggestCafeForm onDone={() => setSuggestOpen(false)} />
       </Modal>

@@ -31,6 +31,7 @@ API responses use `id` (never `_id`) and never include `__v` or the password has
 |---|---|---|
 | `name`, `address` | String, required | everywhere |
 | `area` | String | "Poblacion, Makati" on cards. Derived from the last two parts of the address if not given |
+| `location` *(added)* | `{ lat, lng }` or `null` | Confirmed coordinates for Explore map pins. Admin create/edit accepts `latitude` and `longitude`; both blank removes a pin, omitting both preserves it. Unlocated cafés remain searchable |
 | `hours`, `description` | String | Café profile |
 | `tags` | [String] | Admin "Tags" |
 | `photos` | [`/uploads/cafes/…`] | `photo` (a virtual field) is the first one, used as the cover |
@@ -70,13 +71,13 @@ Errors are always `{ message }` with the right status: 400 bad input, 401 not lo
 | Method & path | Who | Notes |
 |---|---|---|
 | `POST /auth/signup` `{ name, email, password, acceptedPolicies: true }` | 🔓 | Records the server's policy version and acceptance date, sets the cookie → `{ user }`. Missing or non-boolean acceptance returns 400 with `code: POLICY_ACCEPTANCE_REQUIRED` |
-| `POST /auth/login` `{ email, password }` | 🔓 | 401 for wrong credentials, 403 if suspended |
+| `POST /auth/login` `{ email, password }` | 🔓 | Regular users only. 401 for wrong credentials, 403 if suspended or if valid admin credentials are submitted. Admins must use `/admin/login`; no session is created by a rejected login |
 | `POST /auth/google` `{ credential, acceptedPolicies? }` | 🔓 | The ID token from Google's button. Logs in, links to the account with that email, or creates one → `{ user, isNew }`. New accounts require `acceptedPolicies: true`; otherwise returns 400 with `code: POLICY_ACCEPTANCE_REQUIRED` so the UI can ask for agreement first. 401 for a bad or unverified token, 403 for admins and suspended accounts, 409 if the email is already linked to a different Google account, 503 if `GOOGLE_CLIENT_ID` is unset |
 | `POST /auth/logout` | 🔓 | Clears the cookie |
 | `POST /auth/verify-email` `{ token }` | 🔓 | Marks the email verified. 400 for a wrong or expired (24 h) token. Opening the same link again is harmless |
 | `POST /auth/resend-verification` | 🔑 | One email per minute (429 after that). 400 if already verified |
 | `POST /auth/forgot-password` `{ email }` | 🔓 | Always 200 with the same message, so it doesn't reveal which emails have accounts. Link lasts 1 h, works once |
-| `POST /auth/reset-password` `{ token, password }` | 🔓 | Sets the password, marks the email verified, logs the user in → `{ user }`. 400 for a bad token or short password |
+| `POST /auth/reset-password` `{ token, password }` | 🔓 | Sets the password and marks the email verified. Regular users are signed in → `{ user }`. Admins receive `{ adminLoginRequired: true, message }` without a session and must use Admin Access. 400 for a bad token or short password |
 | `GET /auth/me` | optional | `{ user }` including `favorites` and `unreadNotifications`, or `{ user: null }` |
 | `GET /cafes?q=&sort=popular\|rating\|new&featured=true&limit=` | 🔓 | Active cafés only. `q` matches name, area and tags |
 | `GET /cafes/:id` | optional | Adds `ratingCounts {5..1}` and `isFavorite` |

@@ -1,0 +1,38 @@
+{
+  "researchedOn": "2026-10-20",
+  "notes": "Only researched café/building locations are included. Mall tenants share the mall's published site center. Eliot's Cafe has no confirmed coordinates and is deliberately left unpinned.",
+  "places": {
+    "solstice": {
+      "lat": 14.77024, "lng": 121.0568546,
+      "source": "https://wheretocoffee.app/cafe/solstice-coffee"
+    },
+    "ssoluz": {
+      "lat": 14.75065, "lng": 121.0208377,
+      "source": "https://restaurantguru.com/Ssoluz-Caloocan-Caloocan"
+    },
+    "lucias": {
+      "lat": 14.7572599, "lng": 121.0288802,
+      "source": "https://wheretocoffee.app/cafe/lucias-kitchen-and-cafe",
+      "notes": "Listing identifies Unit F, B5 L47, Saranay Homes, Malapitan Road, matching the business's published lot/unit."
+    },
+    "smCaloocan": {
+      "lat": 14.750423, "lng": 121.019592,
+      "source": "https://ncr.emb.gov.ph/wp-content/uploads/2023/02/2.-SM-City-Deparo-IEC-Report.pdf",
+      "notes": "Published project site center, not individual tenant entrances."
+    },
+    "francisco": {
+      "lat": 14.7554332, "lng": 121.0261315,
+      "source": "https://restaurantguru.com/Tata-Ilios-Saranay-Branch-Caloocan"
+    }
+  },
+  "cafes": [
+    { "name": "Solstice Coffee", "address": "Langit Road, Tala, North Caloocan City, Metro Manila", "place": "solstice" },
+    { "name": "Ssoluz Cafe & Studio - Caloocan", "address": "Caloocan Sports Complex, Bagumbong Road corner Malapitan Road, Bagumbong, North Caloocan City", "place": "ssoluz" },
+    { "name": "Lucia's Kitchen & Cafe", "address": "Ground Floor, Noah's Square, Congressional Road corner Malapitan Road, North Caloocan City", "place": "lucias" },
+    { "name": "Mahiwaga Cafe - SM City Caloocan", "address": "SM City Caloocan, Deparo Road, Barangay 171, Bagumbong, North Caloocan City", "place": "smCaloocan" },
+    { "name": "After Tree Dessert Cafe - SM City Caloocan", "address": "SM City Caloocan, Deparo Road, Barangay 171, Bagumbong, North Caloocan City", "place": "smCaloocan" },
+    { "name": "J.CO Donuts & Coffee - SM City Caloocan", "address": "Ground Floor, SM City Caloocan, Deparo Road, Barangay 171, Bagumbong, North Caloocan City", "place": "smCaloocan" },
+    { "name": "But First, Coffee - SM City Caloocan", "address": "Sky Plaza, 3rd Floor, Oasis Counter SP 304, SM City Caloocan, Deparo Road, Barangay 171, Bagumbong, North Caloocan City", "place": "smCaloocan" },
+    { "name": "Francisco Coffee - Saranay Main", "address": "Saranay Rd, Caloocan, Metro Manila", "place": "francisco" }
+  ]
+}

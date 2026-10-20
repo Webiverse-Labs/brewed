@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 @plugin "daisyui" {
   themes: false;
 }
@@ -64,3 +65,35 @@
     display: none;
   }
 }
+
+.cafe-map { font-family: var(--font-sans); }
+.cafe-map .leaflet-control-attribution { font-size: 10px; }
+.brewed-map-pin { background: none; border: 0; }
+.brewed-map-pin > span {
+  position: relative;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 3px 12px rgb(43 30 26 / 0.25);
+}
+.brewed-map-pin > span::after {
+  position: absolute;
+  bottom: -7px;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  background: var(--color-accent);
+  content: "";
+}
+.brewed-map-pin:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 4px; border-radius: 50%; }
+.cafe-map-choices { display: flex; flex-direction: column; gap: 4px; }
+.cafe-map-choices button { border-radius: 8px; padding: 8px; text-align: left; font-weight: 500; }
+.cafe-map-choices a { display: block; padding: 0 8px 8px; color: var(--color-accent); font-size: 12px; text-decoration: underline; }
+.cafe-map-choices button:hover, .cafe-map-choices button:focus-visible { background: var(--color-accent-soft); }

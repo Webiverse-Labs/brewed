@@ -68,6 +68,7 @@ export const router = createBrowserRouter([
         ),
         children: [
           { path: "/", element: <HomePage /> },
+          { path: "/explore", lazy: async () => ({ Component: (await import("./pages/user/ExplorePage.jsx")).default }) },
           { path: "/cafes/:id", element: <CafeProfilePage /> },
           { path: "/log", element: <LogVisitPage /> },
           { path: "/log/success", element: <LogSuccessPage /> },

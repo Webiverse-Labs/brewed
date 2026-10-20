@@ -10,6 +10,7 @@ import { mePayload, publicUser } from "../lib/userPayload.js";
 import { discardUploads, fileUrl } from "../middlewares/uploadMiddleware.js";
 import { verifyCredentials } from "./authController.js";
 import { cafeSearchFilter } from "./cafeController.js";
+import { parseCafeLocation } from "../lib/cafeLocation.js";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -65,6 +66,7 @@ export async function createCafe(req, res) {
     const cafe = await Cafe.create({
       ...pick(body, ["name", "address", "hours", "description"]),
       area: body.area || areaFromAddress(body.address),
+      location: parseCafeLocation(body),
       tags: parseTags(body.tags),
       featured: toBool(body.featured),
       photos: (req.files ?? []).map((file) => fileUrl("cafes", file)),
@@ -83,8 +85,10 @@ export async function updateCafe(req, res) {
     const cafe = await findById(Cafe, req.params.id, "Café");
     const body = req.body ?? {};
     const previousHours = cafe.hours;
+    const location = parseCafeLocation(body);
 
     Object.assign(cafe, pick(body, ["name", "address", "hours", "description", "area"]));
+    if (location !== undefined) cafe.location = location;
     if (body.address !== undefined && body.area === undefined) cafe.area = areaFromAddress(body.address);
     if (body.tags !== undefined) cafe.tags = parseTags(body.tags);
     if (body.active !== undefined) cafe.active = toBool(body.active);

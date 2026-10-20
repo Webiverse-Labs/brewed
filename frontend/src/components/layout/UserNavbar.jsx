@@ -1,16 +1,15 @@
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Bell, House, Plus, Search } from "lucide-react";
+import { Bell, House, Map, Plus } from "lucide-react";
 import Logo from "../ui/Logo.jsx";
 import ProfileMenu from "./ProfileMenu.jsx";
 import { navBtnClass } from "./navStyles.js";
 
 // Desktop floating pill (md and up). Below md, MobileTabBar takes over.
-function UserNavbar({ exploreOpen, onExplore, hasUnread }) {
+function UserNavbar({ hasUnread }) {
   const { pathname } = useLocation();
-  const profileActive = !exploreOpen && (pathname.startsWith("/profile") || pathname.startsWith("/settings"));
+  const profileActive = pathname.startsWith("/profile") || pathname.startsWith("/settings");
 
-  // While Explore is open, it is the only highlighted item.
-  const linkClass = ({ isActive }) => navBtnClass(isActive && !exploreOpen);
+  const linkClass = ({ isActive }) => navBtnClass(isActive);
 
   return (
     <header className="fixed inset-x-0 top-4 z-50 hidden justify-center px-4 md:flex">
@@ -24,9 +23,9 @@ function UserNavbar({ exploreOpen, onExplore, hasUnread }) {
         <NavLink to="/" end className={linkClass}>
           <House size={15} /> Home
         </NavLink>
-        <button type="button" onClick={onExplore} aria-expanded={exploreOpen} className={navBtnClass(exploreOpen)}>
-          <Search size={15} /> Explore
-        </button>
+        <NavLink to="/explore" className={linkClass}>
+          <Map size={15} /> Explore
+        </NavLink>
         <NavLink to="/log" className={linkClass}>
           <Plus size={15} /> Log a Visit
         </NavLink>

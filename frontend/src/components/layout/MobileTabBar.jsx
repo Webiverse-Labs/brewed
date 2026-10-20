@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Bell, House, Plus, Search } from "lucide-react";
+import { Bell, House, Map, Plus } from "lucide-react";
 import Avatar from "../ui/Avatar.jsx";
 import { cn } from "../../lib/cn.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -11,9 +11,9 @@ const tabClass = (active) =>
   );
 
 // Bottom tab bar below md. Log a Visit is the dark center circle.
-function MobileTabBar({ exploreOpen, onExplore, hasUnread }) {
+function MobileTabBar({ hasUnread }) {
   const { user } = useAuth();
-  const linkClass = ({ isActive }) => tabClass(isActive && !exploreOpen);
+  const linkClass = ({ isActive }) => tabClass(isActive);
 
   return (
     <nav
@@ -24,9 +24,9 @@ function MobileTabBar({ exploreOpen, onExplore, hasUnread }) {
         <NavLink to="/" end className={linkClass}>
           <House size={20} /> Home
         </NavLink>
-        <button type="button" onClick={onExplore} aria-expanded={exploreOpen} className={tabClass(exploreOpen)}>
-          <Search size={20} /> Explore
-        </button>
+        <NavLink to="/explore" className={linkClass}>
+          <Map size={20} /> Explore
+        </NavLink>
         <NavLink to="/log" aria-label="Log a Visit" className="grid place-items-center">
           <span className="grid size-12 place-items-center rounded-full bg-primary text-primary-content shadow-soft">
             <Plus size={22} />
