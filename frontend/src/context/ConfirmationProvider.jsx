@@ -11,17 +11,22 @@ function ConfirmationProvider({ children }) {
   const currentRoute = useRef(routeKey);
 
   const finish = useCallback((id, confirmed) => {
-    if (pending.current?.id !== id) return;
-    pending.current.resolve(confirmed);
+    const entry = pending.current;
+    if (entry?.id !== id) return;
+    entry.resolve(confirmed);
     pending.current = null;
     setRequest(null);
+    window.requestAnimationFrame(() => {
+      if (pending.current || currentRoute.current !== entry.routeKey || !entry.trigger?.isConnected) return;
+      entry.trigger.focus?.();
+    });
   }, []);
 
   // A second click cannot replace the target or queue an unseen action.
   const confirm = useCallback((options) => {
     if (pending.current) return Promise.resolve(false);
     return new Promise((resolve) => {
-      const entry = { ...options, id: ++nextId.current, routeKey, resolve, running: false };
+      const entry = { ...options, id: ++nextId.current, routeKey, resolve, running: false, trigger: document.activeElement };
       pending.current = entry;
       setRequest(entry);
     });

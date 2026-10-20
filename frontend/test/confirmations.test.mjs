@@ -109,7 +109,63 @@ async function submit(scope = dialog()) {
 }
 const mutations = () => requests.filter((request) => request.method !== "get");
 
-test("cancel, Escape, close button, and backdrop do not execute the action", async () => {
+function animationFrames(t) {
+  const frames = [];
+  t.mock.method(window, "requestAnimationFrame", (callback) => frames.push(callback));
+  return async () => {
+    await act(async () => {
+      for (const callback of frames.splice(0)) callback(performance.now());
+    });
+  };
+}
+
+function FocusTargets() {
+  const [visible, setVisible] = React.useState(true);
+  return h(React.Fragment, null, visible && h("button", { onClick: () => setVisible(false) }, "Trigger"), h("button", null, "Other"));
+}
+
+for (const confirmed of [false, true]) {
+  test(`focus returns to the trigger on the next frame after ${confirmed ? "success" : "cancellation"}`, async (t) => {
+    const flushFrames = animationFrames(t);
+    await mount(FocusTargets);
+    const trigger = button("Trigger");
+    trigger.focus();
+    const { result } = await open({ onConfirm: () => {} });
+    assert.equal(document.activeElement, button("Cancel", dialog()));
+    if (confirmed) await submit();
+    else await click(button("Cancel", dialog()));
+    assert.equal(await result, confirmed);
+    assert.equal(dialog(), null);
+    const focus = t.mock.method(trigger, "focus");
+    await flushFrames();
+    assert.equal(focus.mock.callCount(), 1);
+    assert.equal(document.activeElement, trigger);
+  });
+}
+
+for (const scenario of ["another request", "navigation before close", "navigation after close", "disconnected trigger"]) {
+  test(`focus restoration skips ${scenario}`, async (t) => {
+    const flushFrames = animationFrames(t);
+    await mount(FocusTargets);
+    const trigger = button("Trigger");
+    trigger.focus();
+    const { result } = await open();
+    if (scenario === "navigation before close") await act(async () => navigate("/other"));
+    else await click(button("Cancel", dialog()));
+    assert.equal(await result, false);
+    if (scenario === "another request") await open();
+    if (scenario === "navigation after close") await act(async () => navigate("/other"));
+    if (scenario === "disconnected trigger") await click(trigger);
+    const target = dialog() ? button("Cancel", dialog()) : button("Other");
+    target.focus();
+    const focus = t.mock.method(trigger, "focus");
+    await flushFrames();
+    assert.equal(focus.mock.callCount(), 0);
+    assert.equal(document.activeElement, target);
+  });
+}
+
+test("cancel, Escape, close button, backdrop, and native close do not execute the action", async () => {
   await mount();
   let calls = 0;
   for (const close of [
@@ -117,6 +173,7 @@ test("cancel, Escape, close button, and backdrop do not execute the action", asy
     () => dialog().dispatchEvent(new browser.Event("cancel", { cancelable: true })),
     () => dialog().querySelector('[aria-label="Close"]').click(),
     () => dialog().querySelector('[aria-label="Close dialog"]').click(),
+    () => dialog().close(),
   ]) {
     const { result } = await open({ onConfirm: () => { calls++; } });
     assert.equal(document.activeElement, button("Cancel", dialog()));
@@ -125,6 +182,15 @@ test("cancel, Escape, close button, and backdrop do not execute the action", asy
     assert.equal(dialog(), null);
   }
   assert.equal(calls, 0);
+});
+
+test("a queued native close event cannot dismiss a dialog that is still open", async () => {
+  await mount();
+  const { result } = await open();
+  await act(async () => dialog().dispatchEvent(new browser.Event("close")));
+  assert.equal(dialog().open, true);
+  await click(button("Cancel", dialog()));
+  assert.equal(await result, false);
 });
 
 test("pending confirmation blocks repeat submits and dismissal", async () => {
@@ -144,6 +210,11 @@ test("pending confirmation blocks repeat submits and dismissal", async () => {
   await act(async () => dialog().dispatchEvent(escape));
   assert.equal(escape.defaultPrevented, true);
   assert.ok(dialog());
+  const activeDialog = dialog();
+  await act(async () => activeDialog.close());
+  assert.equal(dialog(), activeDialog);
+  assert.equal(activeDialog.open, true, "A native close must reopen the busy dialog");
+  assert.equal(activeDialog.getAttribute("aria-busy"), "true");
   await act(async () => finish());
   assert.equal(await result, true);
   assert.equal(dialog(), null);

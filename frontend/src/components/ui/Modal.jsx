@@ -36,7 +36,9 @@ function Modal({ open, onClose, title, size = "md", busy = false, role = "dialog
       }}
       onClose={() => {
         // A queued close event from an earlier opening must not dismiss a newly opened dialog.
-        if (open && !ref.current?.open && !busy) onClose();
+        if (!open || ref.current?.open) return;
+        if (busy) ref.current?.showModal();
+        else onClose();
       }}
     >
       <div
