@@ -2,6 +2,7 @@ import { useOutletContext } from "react-router-dom";
 import { Search } from "lucide-react";
 import Page from "../../components/layout/Page.jsx";
 import CafeRow from "../../components/cafe/CafeRow.jsx";
+import PopularCafeCarousel from "../../components/cafe/PopularCafeCarousel.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
 import { useApi } from "../../hooks/useApi.js";
@@ -14,19 +15,20 @@ const greeting = () => {
 };
 
 const rows = [
-  { title: "Popular Cafés", path: "/cafes?sort=popular&limit=12" },
+  { title: "Popular Cafés", path: "/cafes?sort=popular&limit=12", banner: true },
   { title: "Featured Cafés", path: "/cafes?featured=true&limit=12" },
   { title: "Top Rated", path: "/cafes?sort=rating&limit=12" },
   { title: "Recently Added", path: "/cafes?sort=new&limit=12" },
 ];
 
 // one request per row, so each section loads (or fails) on its own
-function HomeRow({ title, path, onSeeAll }) {
+function HomeRow({ title, path, banner, onSeeAll }) {
   const { data, loading, error, reload } = useApi(path);
 
   if (loading && !data) return <Loader />;
   if (error) return <LoadError message={error} onRetry={reload} />;
   if (!data.cafes.length) return null;
+  if (banner) return <PopularCafeCarousel cafes={data.cafes} onSeeAll={onSeeAll} />;
   return <CafeRow title={title} cafes={data.cafes} onSeeAll={onSeeAll} />;
 }
 

@@ -22,6 +22,7 @@ let vite, root, container, ConfirmationProvider, useConfirmation, AuthContext, A
 let AuthPage, AdminLoginPage, ResetPasswordPage, AdminUsersPage, AdminCafesPage, AdminSuggestionsPage, UserSettingsPage, SecuritySettings, AdminSettingsPage;
 let HomePage, UserLayout, ExplorePage;
 let EmailSettings, ChangeEmailPage;
+let PopularCafeCarousel;
 let ask, navigate;
 const requests = [];
 const person = { id: "user-1", name: "Test User", username: "testuser", email: "test@example.com", status: "active", hasPassword: true, emailVerified: true, visits: 0, favorites: [], createdAt: "2026-10-20T00:00:00Z" };
@@ -56,6 +57,7 @@ before(async () => {
   ({ default: ExplorePage } = await load("pages/user/ExplorePage.jsx"));
   ({ default: EmailSettings } = await load("components/user/EmailSettings.jsx"));
   ({ default: ChangeEmailPage } = await load("pages/auth/ChangeEmailPage.jsx"));
+  ({ default: PopularCafeCarousel } = await load("components/cafe/PopularCafeCarousel.jsx"));
   api.defaults.adapter = async (config) => {
     requests.push({ method: config.method, url: config.url, data: typeof config.data === "string" ? JSON.parse(config.data) : config.data });
     if (!respond) throw new Error(`Unexpected API request: ${config.method} ${config.url}`);
@@ -617,6 +619,128 @@ function HomeScreens() {
 
 const searchPanel = () => container.querySelector('[role="dialog"][aria-label="Search cafés"]');
 const settleSearch = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
+
+const popularCafes = [
+  { ...cafe, name: "First Café", description: "A cozy place for coffee.", rating: 4.5 },
+  { ...cafe, id: "cafe-2", name: "Second Café", photo: "/uploads/cafes/second.jpg" },
+  { ...cafe, id: "cafe-3", name: "Third Café" },
+];
+const carousel = () => container.querySelector('[aria-roledescription="carousel"]');
+const slideName = () => carousel().querySelector("h3").textContent;
+const carouselControl = (label) => carousel().querySelector(`button[aria-label="${label}"]`);
+function CarouselFixture() { return h(PopularCafeCarousel, { cafes: popularCafes, onSeeAll: () => {} }); }
+
+test("Popular Cafés uses pagination, bookmarks, and café links without arrow or playback buttons", async () => {
+  const favoriteUpdates = [];
+  respond = (config) => config.method === "post"
+    ? { favorites: ["cafe-2"] }
+    : { cafes: config.url.includes("sort=popular") ? popularCafes : [cafe] };
+  await mount(HomeScreens, { auth: { updateUser: (patch) => favoriteUpdates.push(patch) } });
+  assert.equal(container.querySelectorAll('[aria-roledescription="carousel"]').length, 1);
+  assert.deepEqual([...container.querySelector("main").querySelectorAll("h2")].map((element) => element.textContent), ["Popular Cafés", "Featured Cafés", "Top Rated", "Recently Added"]);
+  assert.equal(slideName(), "First Café");
+  for (const label of ["Next café", "Previous café", "Pause slideshow", "Play slideshow"]) {
+    assert.equal(carouselControl(label), null);
+  }
+  const section = carousel().closest("section");
+  await click(section.querySelector('[aria-label="Show Third Café (3 of 3)"]'));
+  assert.equal(slideName(), "Third Café");
+  await click(section.querySelector('[aria-label="Show Second Café (2 of 3)"]'));
+  assert.equal(slideName(), "Second Café");
+  assert.equal(section.querySelector('[aria-current="true"]').getAttribute("aria-label"), "Show Second Café (2 of 3)");
+  await click(carouselControl("Save to favorites"));
+  assert.deepEqual(mutations(), [{ method: "post", url: "/cafes/cafe-2/favorite", data: undefined }]);
+  assert.ok(favoriteUpdates.some((patch) => patch.favorites.includes("cafe-2")));
+  assert.equal(slideName(), "Second Café");
+  await click(button("See all", section));
+  assert.ok(searchPanel());
+  await click(searchPanel().querySelector('[aria-label="Close search"]'));
+  await click(carousel().querySelector('a[href="/cafes/cafe-2"]'));
+  assert.ok(container.querySelector("#cafe-detail"));
+});
+
+test("carousel supports keyboard and horizontal swipes, and recovers from a failed photo", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  await mount(CarouselFixture);
+  await act(async () => {
+    carousel().focus();
+    carousel().dispatchEvent(new browser.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  });
+  assert.equal(slideName(), "Second Café");
+  const photo = carousel().querySelector("img");
+  assert.ok(photo);
+  await act(async () => photo.dispatchEvent(new browser.Event("error")));
+  assert.equal(carousel().querySelector("img"), null);
+  assert.equal(slideName(), "Second Café");
+  const swipe = async (x, y) => act(async () => {
+    for (const [type, touches] of [["touchstart", [{ clientX: 200, clientY: 100 }]], ["touchend", [{ clientX: x, clientY: y }]]]) {
+      const event = new browser.Event(type, { bubbles: true });
+      Object.defineProperty(event, type === "touchstart" ? "touches" : "changedTouches", { value: touches });
+      carousel().dispatchEvent(event);
+    }
+  });
+  await swipe(190, 250);
+  assert.equal(slideName(), "Second Café");
+  await swipe(80, 105);
+  assert.equal(slideName(), "Third Café");
+  await act(async () => context.mock.timers.tick(6000));
+  assert.equal(slideName(), "First Café");
+});
+
+test("manual slide selection restarts six-second rotation even while hovered or focused", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  await mount(CarouselFixture);
+  await act(async () => context.mock.timers.tick(6000));
+  assert.equal(slideName(), "Second Café");
+  await act(async () => carousel().querySelector("a").focus());
+  await act(async () => context.mock.timers.tick(12000));
+  assert.equal(slideName(), "Second Café");
+  const section = carousel().closest("section");
+  const thirdDot = section.querySelector('[aria-label="Show Third Café (3 of 3)"]');
+  await act(async () => {
+    section.dispatchEvent(new browser.MouseEvent("mouseover", { bubbles: true, relatedTarget: document.body }));
+    thirdDot.focus();
+  });
+  await click(thirdDot);
+  await act(async () => context.mock.timers.tick(5999));
+  assert.equal(slideName(), "Third Café");
+  await act(async () => context.mock.timers.tick(1));
+  assert.equal(slideName(), "First Café");
+  await act(async () => context.mock.timers.tick(4000));
+  await click(section.querySelector('[aria-label="Show First Café (1 of 3)"]'));
+  await act(async () => context.mock.timers.tick(5999));
+  assert.equal(slideName(), "First Café");
+  await act(async () => context.mock.timers.tick(1));
+  assert.equal(slideName(), "Second Café");
+  await act(async () => context.mock.timers.tick(6000));
+  assert.equal(slideName(), "Third Café");
+});
+
+test("reduced motion disables automatic rotation, and a single café needs no slide controls", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const original = browser.matchMedia;
+  browser.matchMedia = (query) => query === "(prefers-reduced-motion: reduce)"
+    ? { matches: true, addEventListener() {}, removeEventListener() {} }
+    : original.call(browser, query);
+  try {
+    await mount(CarouselFixture);
+    assert.equal(carouselControl("Pause slideshow"), null);
+    await act(async () => context.mock.timers.tick(30000));
+    assert.equal(slideName(), "First Café");
+    await click(carousel().closest("section").querySelector('[aria-label="Show Second Café (2 of 3)"]'));
+    assert.equal(slideName(), "Second Café");
+    await act(async () => context.mock.timers.tick(12000));
+    assert.equal(slideName(), "Second Café");
+  } finally { browser.matchMedia = original; }
+  await act(async () => root.unmount());
+  root = null;
+  container.remove();
+  await mount(() => h(PopularCafeCarousel, { cafes: [cafe], onSeeAll: () => {} }));
+  assert.equal(carouselControl("Next café"), null);
+  assert.equal(carouselControl("Previous café"), null);
+  assert.equal(carouselControl("Pause slideshow"), null);
+  assert.ok(carousel().querySelector(`a[href="/cafes/${cafe.id}"]`));
+});
 
 test("home search opens live results and searches trimmed, encoded text without submitting", async () => {
   const query = "Café & Tea";
