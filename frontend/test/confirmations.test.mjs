@@ -659,7 +659,8 @@ test("Popular Cafés uses pagination, bookmarks, and café links without arrow o
   assert.ok(container.querySelector("#cafe-detail"));
 });
 
-test("carousel supports keyboard and horizontal swipes, and recovers from a failed photo", async () => {
+test("carousel supports keyboard and horizontal swipes, and recovers from a failed photo", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
   await mount(CarouselFixture);
   await act(async () => {
     carousel().focus();
@@ -682,9 +683,11 @@ test("carousel supports keyboard and horizontal swipes, and recovers from a fail
   assert.equal(slideName(), "Second Café");
   await swipe(80, 105);
   assert.equal(slideName(), "Third Café");
+  await act(async () => context.mock.timers.tick(6000));
+  assert.equal(slideName(), "First Café");
 });
 
-test("banner rotates automatically and stops after keyboard focus or slide selection", async (context) => {
+test("manual slide selection restarts six-second rotation even while hovered or focused", async (context) => {
   context.mock.timers.enable({ apis: ["setTimeout"] });
   await mount(CarouselFixture);
   await act(async () => context.mock.timers.tick(6000));
@@ -692,8 +695,24 @@ test("banner rotates automatically and stops after keyboard focus or slide selec
   await act(async () => carousel().querySelector("a").focus());
   await act(async () => context.mock.timers.tick(12000));
   assert.equal(slideName(), "Second Café");
-  await click(carousel().closest("section").querySelector('[aria-label="Show Third Café (3 of 3)"]'));
-  await act(async () => context.mock.timers.tick(12000));
+  const section = carousel().closest("section");
+  const thirdDot = section.querySelector('[aria-label="Show Third Café (3 of 3)"]');
+  await act(async () => {
+    section.dispatchEvent(new browser.MouseEvent("mouseover", { bubbles: true, relatedTarget: document.body }));
+    thirdDot.focus();
+  });
+  await click(thirdDot);
+  await act(async () => context.mock.timers.tick(5999));
+  assert.equal(slideName(), "Third Café");
+  await act(async () => context.mock.timers.tick(1));
+  assert.equal(slideName(), "First Café");
+  await act(async () => context.mock.timers.tick(4000));
+  await click(section.querySelector('[aria-label="Show First Café (1 of 3)"]'));
+  await act(async () => context.mock.timers.tick(5999));
+  assert.equal(slideName(), "First Café");
+  await act(async () => context.mock.timers.tick(1));
+  assert.equal(slideName(), "Second Café");
+  await act(async () => context.mock.timers.tick(6000));
   assert.equal(slideName(), "Third Café");
 });
 
@@ -709,6 +728,8 @@ test("reduced motion disables automatic rotation, and a single café needs no sl
     await act(async () => context.mock.timers.tick(30000));
     assert.equal(slideName(), "First Café");
     await click(carousel().closest("section").querySelector('[aria-label="Show Second Café (2 of 3)"]'));
+    assert.equal(slideName(), "Second Café");
+    await act(async () => context.mock.timers.tick(12000));
     assert.equal(slideName(), "Second Café");
   } finally { browser.matchMedia = original; }
   await act(async () => root.unmount());

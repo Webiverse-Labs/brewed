@@ -13,14 +13,15 @@ const ROTATION_MS = 6000;
 function PopularCafeCarousel({ cafes, onSeeAll }) {
   const titleId = useId();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [rotationCycle, setRotationCycle] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [hovered, setHovered] = useState(false);
+  const [hoverPaused, setHoverPaused] = useState(false);
   const [visible, setVisible] = useState(true);
   const [failedPhoto, setFailedPhoto] = useState(null);
   const touchStart = useRef(null);
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const index = Math.max(0, Math.min(activeIndex, cafes.length - 1));
-  const rotating = playing && !hovered && visible && !reducedMotion && cafes.length > 1;
+  const rotating = playing && !hoverPaused && visible && !reducedMotion && cafes.length > 1;
 
   useEffect(() => {
     const update = () => setVisible(document.visibilityState !== "hidden");
@@ -33,11 +34,14 @@ function PopularCafeCarousel({ cafes, onSeeAll }) {
     if (!rotating) return;
     const timer = setTimeout(() => setActiveIndex((index + 1) % cafes.length), ROTATION_MS);
     return () => clearTimeout(timer);
-  }, [rotating, index, cafes.length]);
+  }, [rotating, index, cafes.length, rotationCycle]);
 
   const showSlide = (next) => {
-    setPlaying(false);
+    // Restart the full interval even when selecting the current dot while hovered or focused.
+    setPlaying(true);
+    setHoverPaused(false);
     setActiveIndex((next + cafes.length) % cafes.length);
+    setRotationCycle((cycle) => cycle + 1);
   };
 
   if (!cafes.length) return null;
@@ -47,7 +51,7 @@ function PopularCafeCarousel({ cafes, onSeeAll }) {
   return (
     <section
       aria-labelledby={titleId} className="flex flex-col gap-4"
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => setHoverPaused(true)} onMouseLeave={() => setHoverPaused(false)}
       onFocusCapture={() => setPlaying(false)}
     >
       <div className="flex items-center justify-between">
@@ -89,13 +93,12 @@ function PopularCafeCarousel({ cafes, onSeeAll }) {
           <CoffeeBean size={230} filled={false} className="absolute top-14 right-[9%] -rotate-25 text-[#edc5a3]/30" />
           <CoffeeBean size={100} filled={false} className="absolute right-[32%] bottom-4 rotate-12 text-[#edc5a3]/15" />
         </div>
-        {hasPhoto && <img key={cafe.photo} src={assetUrl(cafe.photo)} alt="" onError={() => setFailedPhoto(cafe.photo)} className="cafe-banner-enter absolute inset-0 size-full object-cover" />}
+        {hasPhoto && <img key={`photo-${cafe.id}`} src={assetUrl(cafe.photo)} alt="" onError={() => setFailedPhoto(cafe.photo)} className="cafe-banner-photo-enter absolute inset-0 size-full object-cover" />}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-linear-to-r from-primary/95 via-primary/75 to-primary/10" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-linear-to-t from-primary/80 via-transparent to-transparent" />
 
         <div aria-live={rotating ? "off" : "polite"} aria-atomic="true" className="h-full">
           <article key={cafe.id} role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${cafes.length}: ${cafe.name}`} className="cafe-banner-enter relative flex h-full flex-col items-start justify-center px-6 pt-10 pb-24 sm:px-10 lg:px-14">
-            <p className="mb-4 text-xs font-semibold tracking-[0.18em] text-white/70 uppercase">Popular on Brewed</p>
             <h3 title={cafe.name} className="line-clamp-2 max-w-full shrink-0 text-balance font-display text-[32px] leading-[1.1] font-medium sm:text-[44px] lg:max-w-2xl lg:text-[52px]">{cafe.name}</h3>
             {(cafe.area || cafe.address) && <p className="mt-3 flex max-w-full shrink-0 items-center gap-2 text-sm text-white/85 lg:max-w-xl"><MapPin size={16} className="shrink-0" /><span className="truncate">{cafe.area || cafe.address}</span></p>}
             {cafe.description && <p className="mt-4 hidden max-w-lg shrink-0 text-sm leading-relaxed text-white/75 sm:line-clamp-2 sm:text-[15px]">{cafe.description}</p>}
