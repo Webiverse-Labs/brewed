@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, ChevronLeft, ChevronRight, MapPin, Pause, Play } from "lucide-react";
+import { ArrowUpRight, ChevronRight, MapPin } from "lucide-react";
 import BookmarkBtn from "../ui/BookmarkBtn.jsx";
 import BeanRating from "../ui/BeanRating.jsx";
 import CoffeeBean from "../ui/CoffeeBean.jsx";
@@ -9,7 +9,6 @@ import { assetUrl } from "../../lib/assetUrl.js";
 import { cn } from "../../lib/cn.js";
 
 const ROTATION_MS = 6000;
-const controlClass = "grid size-10 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition-colors hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
 
 function PopularCafeCarousel({ cafes, onSeeAll }) {
   const titleId = useId();
@@ -19,7 +18,6 @@ function PopularCafeCarousel({ cafes, onSeeAll }) {
   const [visible, setVisible] = useState(true);
   const [failedPhoto, setFailedPhoto] = useState(null);
   const touchStart = useRef(null);
-  const rotationButton = useRef(null);
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const index = Math.max(0, Math.min(activeIndex, cafes.length - 1));
   const rotating = playing && !hovered && visible && !reducedMotion && cafes.length > 1;
@@ -50,7 +48,7 @@ function PopularCafeCarousel({ cafes, onSeeAll }) {
     <section
       aria-labelledby={titleId} className="flex flex-col gap-4"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onFocusCapture={(event) => { if (event.target !== rotationButton.current) setPlaying(false); }}
+      onFocusCapture={() => setPlaying(false)}
     >
       <div className="flex items-center justify-between">
         <h2 id={titleId} className="font-display text-xl font-medium">Popular Cafés</h2>
@@ -82,7 +80,7 @@ function PopularCafeCarousel({ cafes, onSeeAll }) {
           if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) showSlide(index + (dx < 0 ? 1 : -1));
         }}
         onTouchCancel={() => { touchStart.current = null; }}
-        className="relative isolate h-[420px] overflow-hidden rounded-[28px] bg-primary text-white shadow-soft outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 sm:h-[480px]"
+        className="relative isolate h-[400px] w-full overflow-hidden rounded-[28px] bg-primary text-white shadow-soft outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 sm:h-[450px]"
         style={{ touchAction: "pan-y pinch-zoom" }}
       >
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(ellipse_at_85%_25%,#9b6043_0%,#4b3025_42%,#2b1e1a_80%)]">
@@ -110,19 +108,12 @@ function PopularCafeCarousel({ cafes, onSeeAll }) {
         <BookmarkBtn key={cafe.id} cafeId={cafe.id} onDark size="lg" className="absolute top-5 right-5 z-10" />
 
         {cafes.length > 1 && (
-          <div className="absolute right-6 bottom-5 left-6 flex items-center justify-between gap-4 sm:right-10 sm:left-10 lg:right-14 lg:left-14">
-            <p aria-hidden="true" className="text-sm tabular-nums text-white/60"><span className="font-medium text-white">{String(index + 1).padStart(2, "0")}</span><span className="mx-2">/</span>{String(cafes.length).padStart(2, "0")}</p>
-            <div className="flex items-center gap-2">
-              {!reducedMotion && <button ref={rotationButton} type="button" aria-label={playing ? "Pause slideshow" : "Play slideshow"} onClick={() => setPlaying((current) => !current)} className={controlClass}>{playing ? <Pause size={15} /> : <Play size={15} />}</button>}
-              <button type="button" aria-label="Previous café" onClick={() => showSlide(index - 1)} className={controlClass}><ChevronLeft size={19} /></button>
-              <button type="button" aria-label="Next café" onClick={() => showSlide(index + 1)} className={controlClass}><ChevronRight size={19} /></button>
-            </div>
-          </div>
+          <p aria-hidden="true" className="absolute right-6 bottom-5 text-sm tabular-nums text-white/60 sm:right-10 lg:right-14"><span className="font-medium text-white">{String(index + 1).padStart(2, "0")}</span><span className="mx-2">/</span>{String(cafes.length).padStart(2, "0")}</p>
         )}
       </div>
       {cafes.length > 1 && (
         <div role="group" aria-label="Choose a popular café" className="-mt-2 flex flex-wrap items-center justify-center">
-          {cafes.map((item, position) => <button key={item.id} type="button" aria-label={`Show ${item.name} (${position + 1} of ${cafes.length})`} aria-current={position === index ? "true" : undefined} onClick={() => showSlide(position)} className="grid h-8 w-8 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-accent"><span className={cn("h-1.5 rounded-full transition-all motion-reduce:transition-none", position === index ? "w-6 bg-accent" : "w-1.5 bg-base-300 hover:bg-secondary")} /></button>)}
+          {cafes.map((item, position) => <button key={item.id} type="button" aria-label={`Show ${item.name} (${position + 1} of ${cafes.length})`} aria-current={position === index ? "true" : undefined} onClick={() => showSlide(position)} className="group grid size-6 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-accent"><span className={cn("size-1.5 rounded-full transition-colors motion-reduce:transition-none", position === index ? "bg-accent" : "bg-base-300 group-hover:bg-secondary")} /></button>)}
         </div>
       )}
     </section>

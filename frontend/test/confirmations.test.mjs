@@ -630,7 +630,7 @@ const slideName = () => carousel().querySelector("h3").textContent;
 const carouselControl = (label) => carousel().querySelector(`button[aria-label="${label}"]`);
 function CarouselFixture() { return h(PopularCafeCarousel, { cafes: popularCafes, onSeeAll: () => {} }); }
 
-test("Popular Cafés uses a banner with working arrows, pagination, bookmarks, and café links", async () => {
+test("Popular Cafés uses pagination, bookmarks, and café links without arrow or playback buttons", async () => {
   const favoriteUpdates = [];
   respond = (config) => config.method === "post"
     ? { favorites: ["cafe-2"] }
@@ -639,12 +639,12 @@ test("Popular Cafés uses a banner with working arrows, pagination, bookmarks, a
   assert.equal(container.querySelectorAll('[aria-roledescription="carousel"]').length, 1);
   assert.deepEqual([...container.querySelector("main").querySelectorAll("h2")].map((element) => element.textContent), ["Popular Cafés", "Featured Cafés", "Top Rated", "Recently Added"]);
   assert.equal(slideName(), "First Café");
-  await click(carouselControl("Next café"));
-  assert.equal(slideName(), "Second Café");
-  await click(carouselControl("Previous café"));
-  await click(carouselControl("Previous café"));
-  assert.equal(slideName(), "Third Café");
+  for (const label of ["Next café", "Previous café", "Pause slideshow", "Play slideshow"]) {
+    assert.equal(carouselControl(label), null);
+  }
   const section = carousel().closest("section");
+  await click(section.querySelector('[aria-label="Show Third Café (3 of 3)"]'));
+  assert.equal(slideName(), "Third Café");
   await click(section.querySelector('[aria-label="Show Second Café (2 of 3)"]'));
   assert.equal(slideName(), "Second Café");
   assert.equal(section.querySelector('[aria-current="true"]').getAttribute("aria-label"), "Show Second Café (2 of 3)");
@@ -684,19 +684,15 @@ test("carousel supports keyboard and horizontal swipes, and recovers from a fail
   assert.equal(slideName(), "Third Café");
 });
 
-test("banner rotates automatically, pauses for keyboard focus, and supports play and pause", async (context) => {
+test("banner rotates automatically and stops after keyboard focus or slide selection", async (context) => {
   context.mock.timers.enable({ apis: ["setTimeout"] });
   await mount(CarouselFixture);
   await act(async () => context.mock.timers.tick(6000));
   assert.equal(slideName(), "Second Café");
   await act(async () => carousel().querySelector("a").focus());
-  assert.ok(carouselControl("Play slideshow"));
   await act(async () => context.mock.timers.tick(12000));
   assert.equal(slideName(), "Second Café");
-  await click(carouselControl("Play slideshow"));
-  await act(async () => context.mock.timers.tick(6000));
-  assert.equal(slideName(), "Third Café");
-  await click(carouselControl("Pause slideshow"));
+  await click(carousel().closest("section").querySelector('[aria-label="Show Third Café (3 of 3)"]'));
   await act(async () => context.mock.timers.tick(12000));
   assert.equal(slideName(), "Third Café");
 });
@@ -712,7 +708,7 @@ test("reduced motion disables automatic rotation, and a single café needs no sl
     assert.equal(carouselControl("Pause slideshow"), null);
     await act(async () => context.mock.timers.tick(30000));
     assert.equal(slideName(), "First Café");
-    await click(carouselControl("Next café"));
+    await click(carousel().closest("section").querySelector('[aria-label="Show Second Café (2 of 3)"]'));
     assert.equal(slideName(), "Second Café");
   } finally { browser.matchMedia = original; }
   await act(async () => root.unmount());
