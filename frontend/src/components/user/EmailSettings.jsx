@@ -5,6 +5,7 @@ import Field from "../ui/Field.jsx";
 import PasswordInput from "../ui/PasswordInput.jsx";
 import SectionLabel from "../ui/SectionLabel.jsx";
 import TextInput from "../ui/TextInput.jsx";
+import ValidationReminder from "../ui/ValidationReminder.jsx";
 import api from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useConfirmation } from "../../hooks/useConfirmation.js";
@@ -13,15 +14,22 @@ function EmailSettings() {
   const { user, updateUser } = useAuth();
   const confirm = useConfirmation();
   const [saving, setSaving] = useState(false);
+  const [reminder, setReminder] = useState(null);
   const hasPassword = user.hasPassword !== false;
 
   const requestChange = async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
-    if (!form.reportValidity() || saving) return;
+    if (saving) return;
     const fields = new FormData(form);
     const email = fields.get("email").trim().toLowerCase();
-    if (email === user.email.toLowerCase()) return toast.error("Enter a different email address.");
+    const emailField = form.elements.namedItem("email");
+    const passwordField = form.elements.namedItem("emailCurrentPassword");
+    if (!email) return setReminder({ message: "Enter your new email address.", field: emailField });
+    if (email.length > 254) return setReminder({ message: "Email addresses must be no more than 254 characters.", field: emailField });
+    if (!emailField.validity.valid) return setReminder({ message: "Enter a valid email address.", field: emailField });
+    if (email === user.email.toLowerCase()) return setReminder({ message: "Enter an email address different from your current one.", field: emailField });
+    if (!passwordField.value) return setReminder({ message: "Enter your current password to update your email.", field: passwordField });
     await confirm({
       title: "Update your email?",
       description: <>We'll send a confirmation link to <strong className="break-all text-base-content">{email}</strong>. Your current email stays active until you confirm the new address.</>,
@@ -63,7 +71,7 @@ function EmailSettings() {
         </div>
       )}
       {hasPassword ? (
-        <form onSubmit={requestChange} className="flex flex-col gap-4">
+        <form onSubmit={requestChange} noValidate className="flex flex-col gap-4">
           <Field label="New Email">
             <TextInput type="email" name="email" required maxLength={254} autoComplete="email" placeholder="Enter your new email address" disabled={saving} />
           </Field>
@@ -76,6 +84,7 @@ function EmailSettings() {
       ) : (
         <p className="text-[13px] text-secondary">You signed in with Google. <a href="#password-settings" className="font-medium text-accent underline">Set an account password below</a> before updating your email. Your Google sign-in will stay connected.</p>
       )}
+      {reminder && <ValidationReminder {...reminder} onClose={() => setReminder(null)} />}
     </section>
   );
 }

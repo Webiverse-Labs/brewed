@@ -14,6 +14,8 @@ Brewed asks for confirmation before these actions:
 
 Dialogs focus Cancel when opened. Cancel, Escape, the close button, and the backdrop dismiss the dialog before an action starts. During a request all actions and dismissal are disabled, and repeated submits cannot create duplicate requests. A failed request stays open with an announced error and permits retry or cancellation. Navigating away cancels a dialog that has not been confirmed.
 
+The email and password forms in Security show a validation reminder for missing fields, invalid or unchanged email addresses, passwords shorter than eight characters, and mismatched passwords. These reminders focus Got it; dismissal returns focus to the field that needs attention and preserves the form values. Valid forms proceed to the confirmation dialog before saving.
+
 `ConfirmationProvider` lives above authentication in `RootLayout`. Call `useConfirmation()` with a title, description, button labels, and an `onConfirm` callback that performs the action. The callback must throw on failure so the dialog can display the error. The returned promise resolves to `true` after successful completion, or `false` on cancellation. Do not put the API request after the confirmation promise: the dialog needs to await it to show progress and errors.
 
 Run `npm test --prefix frontend` for the DOM interaction checks. They render the actual components with Happy DOM and intercept Axios requests; they do not connect to MongoDB or change real accounts. Run `npm run lint` and `npm run build` for the normal frontend checks.

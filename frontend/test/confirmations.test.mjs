@@ -422,6 +422,51 @@ for (const status of ["approved", "rejected"]) {
   });
 }
 
+for (const hasPassword of [true, false]) {
+  test(`${hasPassword ? "password update" : "first password"} reminders block invalid submissions and return focus to the field`, async () => {
+    await mount(SecuritySettings, { auth: { user: { ...person, hasPassword }, updateUser: () => {} } });
+    const saveLabel = hasPassword ? "Update Password" : "Set Password";
+    const required = hasPassword ? ["current", "next", "confirm"] : ["next", "confirm"];
+    for (const name of required) {
+      const field = container.querySelector(`[name="${name}"]`);
+      await click(button(saveLabel));
+      assert.match(dialog().textContent, /fill out all password fields/);
+      assert.equal(document.activeElement, button("Got it", dialog()));
+      assert.equal(mutations().length, 0);
+      await click(button("Got it", dialog()));
+      assert.equal(dialog(), null);
+      assert.equal(document.activeElement, field);
+      await fill(field, name === "current" ? "old-test-password" : "new-test-password");
+    }
+
+    const next = container.querySelector('[name="next"]');
+    const confirmation = container.querySelector('[name="confirm"]');
+    await fill(next, "short");
+    await fill(confirmation, "short");
+    await click(button(saveLabel));
+    assert.match(dialog().textContent, /at least 8 characters/);
+    await act(async () => dialog().dispatchEvent(new browser.Event("cancel", { cancelable: true })));
+    assert.equal(dialog(), null);
+    assert.equal(document.activeElement, next);
+    assert.equal(next.value, "short");
+
+    await fill(next, "new-test-password");
+    await fill(confirmation, "different-test-password");
+    await click(button(saveLabel));
+    assert.match(dialog().textContent, /passwords don't match/);
+    await click(dialog().querySelector('[aria-label="Close"]'));
+    assert.equal(document.activeElement, confirmation);
+    assert.equal(confirmation.value, "different-test-password");
+    assert.equal(mutations().length, 0);
+
+    await fill(confirmation, "new-test-password");
+    await click(button(saveLabel));
+    assert.match(dialog().textContent, hasPassword ? /Change your password\?/ : /Set an account password\?/);
+    assert.equal(mutations().length, 0);
+    await click(button("Cancel", dialog()));
+  });
+}
+
 test("password change can be cancelled without losing input or sending a request", async () => {
   respond = () => ({});
   await mount(SecuritySettings, { auth: { updateUser: () => {} } });
@@ -458,13 +503,29 @@ test("user email update validates fields, waits for confirmation, and preserves 
   respond = () => ({ user: { ...person, pendingEmail: "new@example.com" } });
   await mount(Settings);
   await click(button("Update Email"));
-  assert.equal(dialog(), null);
+  assert.match(dialog().textContent, /Enter your new email address/);
   assert.equal(mutations().length, 0);
+  await click(button("Got it", dialog()));
+  assert.equal(document.activeElement, container.querySelector('[name="email"]'));
   await fill(container.querySelector('[name="email"]'), "bad-email");
   await fill(container.querySelector('[name="emailCurrentPassword"]'), "test-password");
   await click(button("Update Email"));
-  assert.equal(dialog(), null);
+  assert.match(dialog().textContent, /Enter a valid email address/);
+  await click(button("Got it", dialog()));
+  assert.equal(mutations().length, 0);
+  await fill(container.querySelector('[name="email"]'), "TEST@example.com");
+  await click(button("Update Email"));
+  assert.match(dialog().textContent, /different from your current one/);
+  await click(button("Got it", dialog()));
   await fill(container.querySelector('[name="email"]'), "NEW@example.com");
+  await fill(container.querySelector('[name="emailCurrentPassword"]'), "");
+  await click(button("Update Email"));
+  assert.match(dialog().textContent, /Enter your current password/);
+  await click(button("Got it", dialog()));
+  assert.equal(document.activeElement, container.querySelector('[name="emailCurrentPassword"]'));
+  assert.equal(container.querySelector('[name="email"]').value, "NEW@example.com");
+  assert.equal(mutations().length, 0);
+  await fill(container.querySelector('[name="emailCurrentPassword"]'), "test-password");
   await click(button("Update Email"));
   assert.match(dialog().textContent, /new@example.com/);
   assert.equal(mutations().length, 0);

@@ -5,6 +5,7 @@ import Field from "../ui/Field.jsx";
 import PasswordInput from "../ui/PasswordInput.jsx";
 import SectionLabel from "../ui/SectionLabel.jsx";
 import Button from "../ui/Button.jsx";
+import ValidationReminder from "../ui/ValidationReminder.jsx";
 import api from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useConfirmation } from "../../hooks/useConfirmation.js";
@@ -17,12 +18,18 @@ function SecuritySettings({ onDeleteAccount }) {
   const hasPassword = user.hasPassword !== false;
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  const [reminder, setReminder] = useState(null);
 
   const handlePassword = async (e) => {
     e.preventDefault();
+    if (saving) return;
     const form = e.currentTarget;
     const data = new FormData(form);
-    if (data.get("next") !== data.get("confirm")) return toast.error("New passwords don't match.");
+    const requiredFields = hasPassword ? ["current", "next", "confirm"] : ["next", "confirm"];
+    const missingField = requiredFields.map((name) => form.elements.namedItem(name)).find((field) => !field.value);
+    if (missingField) return setReminder({ message: "Please fill out all password fields before continuing.", field: missingField });
+    if (data.get("next").length < 8) return setReminder({ message: "Your new password must be at least 8 characters.", field: form.elements.namedItem("next") });
+    if (data.get("next") !== data.get("confirm")) return setReminder({ message: "New passwords don't match. Re-enter your new password.", field: form.elements.namedItem("confirm") });
 
     await confirm({
       title: hasPassword ? "Change your password?" : "Set an account password?",
@@ -52,7 +59,7 @@ function SecuritySettings({ onDeleteAccount }) {
   return (
     <div className="flex flex-col gap-8">
       <EmailSettings />
-      <form id="password-settings" onSubmit={handlePassword} className="flex scroll-mt-24 flex-col gap-4 border-t border-base-300 pt-6">
+      <form id="password-settings" onSubmit={handlePassword} noValidate className="flex scroll-mt-24 flex-col gap-4 border-t border-base-300 pt-6">
         <SectionLabel>{hasPassword ? "Update Password" : "Set a Password"}</SectionLabel>
         {!hasPassword && (
           <p className="-mt-2 text-[13px] text-secondary">
@@ -85,7 +92,7 @@ function SecuritySettings({ onDeleteAccount }) {
         </Button>
       </div>
 
-      <div className="flex items-center justify-between gap-4 rounded-box border border-error/20 bg-error/5 p-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-[15px] font-medium text-error">Delete Account</p>
           <p className="text-[13px] text-secondary">This action is permanent and cannot be undone.</p>
@@ -94,6 +101,7 @@ function SecuritySettings({ onDeleteAccount }) {
           Delete
         </Button>
       </div>
+      {reminder && <ValidationReminder {...reminder} onClose={() => setReminder(null)} />}
     </div>
   );
 }

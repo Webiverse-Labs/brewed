@@ -19,7 +19,7 @@ import { useAuth } from "../../hooks/useAuth.js";
 const tabs = [
   { value: "visited", label: "Visited" },
   { value: "favorites", label: "Favorites" },
-  { value: "logs", label: "Logs" },
+  { value: "logs", label: "Entries" },
 ];
 
 // Content of the selected tab; each tab is its own request.
@@ -43,7 +43,7 @@ function ProfileTab({ username, tab }) {
     );
   }
 
-  if (data.logs.length === 0) return <EmptyState>No logs yet.</EmptyState>;
+  if (data.logs.length === 0) return <EmptyState>No entries yet.</EmptyState>;
   const groups = [
     ["Published Review", data.logs.filter((l) => l.type === "review")],
     ["Personal Diary", data.logs.filter((l) => l.type === "diary")],

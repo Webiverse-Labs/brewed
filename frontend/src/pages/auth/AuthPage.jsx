@@ -138,8 +138,8 @@ function AuthPage() {
       />
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         {isSignup && (
-          <Field label="Full Name">
-            <TextInput name="name" required placeholder="Ada Lovelace" autoComplete="name" />
+          <Field label="Display Name">
+            <TextInput name="name" required placeholder="Choose a display name" autoComplete="nickname" />
           </Field>
         )}
         <Field label="Email">

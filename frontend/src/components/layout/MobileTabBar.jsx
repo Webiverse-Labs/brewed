@@ -1,8 +1,7 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { Bell, House, Map, Plus } from "lucide-react";
-import Avatar from "../ui/Avatar.jsx";
+import ProfileMenu from "./ProfileMenu.jsx";
 import { cn } from "../../lib/cn.js";
-import { useAuth } from "../../hooks/useAuth.js";
 
 const tabClass = (active) =>
   cn(
@@ -12,7 +11,8 @@ const tabClass = (active) =>
 
 // Bottom tab bar below md. Log a Visit is the dark center circle.
 function MobileTabBar({ hasUnread }) {
-  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const profileActive = pathname.startsWith("/profile") || pathname.startsWith("/settings");
   const linkClass = ({ isActive }) => tabClass(isActive);
 
   return (
@@ -39,10 +39,7 @@ function MobileTabBar({ hasUnread }) {
           </span>
           Alerts
         </NavLink>
-        <NavLink to="/profile" className={linkClass}>
-          <Avatar name={user.name} src={user.avatarUrl} size="2xs" />
-          Profile
-        </NavLink>
+        <ProfileMenu active={profileActive} mobile />
       </div>
     </nav>
   );
