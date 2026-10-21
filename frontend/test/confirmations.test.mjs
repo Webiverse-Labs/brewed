@@ -20,7 +20,7 @@ const { default: react } = await import("@vitejs/plugin-react");
 
 let vite, root, container, ConfirmationProvider, useConfirmation, AuthContext, AuthProvider, api;
 let AuthPage, AdminLoginPage, ResetPasswordPage, AdminUsersPage, AdminCafesPage, AdminSuggestionsPage, UserSettingsPage, SecuritySettings, AdminSettingsPage;
-let HomePage, UserLayout, ExplorePage;
+let HomePage, UserLayout, ExplorePage, AdminLayout, AuthLayout, PolicyPage;
 let EmailSettings, ChangeEmailPage;
 let PopularCafeCarousel;
 let ask, navigate;
@@ -54,6 +54,9 @@ before(async () => {
   ({ default: AdminSettingsPage } = await load("pages/admin/AdminSettingsPage.jsx"));
   ({ default: HomePage } = await load("pages/user/HomePage.jsx"));
   ({ default: UserLayout } = await load("components/layout/UserLayout.jsx"));
+  ({ default: AdminLayout } = await load("components/layout/AdminLayout.jsx"));
+  ({ default: AuthLayout } = await load("components/layout/AuthLayout.jsx"));
+  ({ default: PolicyPage } = await load("pages/legal/PolicyPage.jsx"));
   ({ default: ExplorePage } = await load("pages/user/ExplorePage.jsx"));
   ({ default: EmailSettings } = await load("components/user/EmailSettings.jsx"));
   ({ default: ChangeEmailPage } = await load("pages/auth/ChangeEmailPage.jsx"));
@@ -872,25 +875,51 @@ test("new Google account from login requires a checkbox and confirmation before 
 });
 
 
-test("footer displays All rights reserved, policy links, and copies developer email on mail icon click", async () => {
-  const copied = [];
-  Object.defineProperty(globalThis.navigator, "clipboard", {
-    configurable: true,
-    value: { writeText: async (text) => { copied.push(text); } },
-  });
+test("user footer keeps copyright and policy links without the mail button", async () => {
   respond = () => ({ cafes: [cafe] });
-  function HomeWithToaster() {
-    return h(React.Fragment, null, h(HomeScreens), h(Toaster));
-  }
-  await mount(HomeWithToaster);
+  await mount(HomeScreens);
   const footer = container.querySelector("footer");
   assert.ok(footer);
   assert.match(footer.textContent, /© 2026 Webiverse Labs\. All rights reserved\./);
   assert.ok(footer.querySelector('a[href="/privacy"]'));
   assert.ok(footer.querySelector('a[href="/terms"]'));
-  const mailBtn = footer.querySelector('button[aria-label="Copy developer team email webiverselabs@gmail.com"]');
-  assert.ok(mailBtn);
-  await click(mailBtn);
-  assert.deepEqual(copied, ["webiverselabs@gmail.com"]);
-  assert.match(container.textContent, /Copied webiverselabs@gmail\.com to clipboard\./);
+  assert.equal(footer.querySelector("button"), null);
+  assert.equal(footer.querySelector("svg"), null);
+});
+
+test("admin pages and Admin Access have no footer while user auth and policy pages keep it", async () => {
+  function Screens() {
+    return h(Routes, null,
+      h(Route, { path: "/admin", element: h(AdminLayout) },
+        h(Route, { index: true, element: h("p", null, "Admin dashboard") }),
+        h(Route, { path: "settings", element: h("p", null, "Admin settings") }),
+      ),
+      h(Route, { element: h(AuthLayout) },
+        h(Route, { path: "/admin/login", element: h(AdminLoginPage) }),
+        h(Route, { path: "/login", element: h(AuthPage) }),
+        h(Route, { path: "/signup", element: h(AuthPage) }),
+      ),
+      h(Route, { path: "/privacy", element: h(PolicyPage, { type: "privacy" }) }),
+      h(Route, { path: "/terms", element: h(PolicyPage, { type: "terms" }) }),
+    );
+  }
+  await mount(Screens, { path: "/admin" });
+  assert.match(container.querySelector("main").textContent, /Admin dashboard/);
+  assert.equal(container.querySelector("footer"), null);
+  await click(container.querySelector('nav[aria-label="Admin"] a[href="/admin/settings"]'));
+  assert.match(container.querySelector("main").textContent, /Admin settings/);
+  assert.equal(container.querySelector("footer"), null);
+  await act(async () => navigate("/admin/login"));
+  assert.match(container.textContent, /Admin Access/);
+  assert.equal(container.querySelector("footer"), null);
+  for (const path of ["/login", "/signup", "/privacy", "/terms"]) {
+    await act(async () => navigate(path));
+    const footer = container.querySelector("footer");
+    assert.ok(footer);
+    assert.equal(footer.querySelector("button"), null);
+    assert.equal(footer.querySelector("svg"), null);
+    if (path === "/privacy" || path === "/terms") {
+      assert.ok(container.querySelector('main a[href="mailto:webiverselabs@gmail.com"]'));
+    }
+  }
 });

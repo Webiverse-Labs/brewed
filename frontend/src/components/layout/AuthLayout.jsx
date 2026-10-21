@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useMatch, useNavigate } from "react-router-dom";
 import CoffeeBean from "../ui/CoffeeBean.jsx";
 import Logo from "../ui/Logo.jsx";
 import Footer from "./Footer.jsx";
@@ -11,6 +11,7 @@ const CLICK_GAP_MS = 1500;
 // Figma `LandingPage`: shared hero on the left, the route's form card on the right.
 function AuthLayout() {
   const navigate = useNavigate();
+  const adminRoute = useMatch("/admin/*");
   const clicks = useRef({ count: 0, last: 0 });
 
   // Hidden admin entry: 5 quick clicks on the logo open /admin/login. No cursor, hover or focus cue on purpose.
@@ -59,7 +60,7 @@ function AuthLayout() {
           </div>
         </div>
       </div>
-      <Footer />
+      {!adminRoute && <Footer />}
     </div>
   );
 }

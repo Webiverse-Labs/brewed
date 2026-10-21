@@ -3,7 +3,6 @@ import { Outlet } from "react-router-dom";
 import { Menu } from "lucide-react";
 import AdminSidebar from "../admin/AdminSidebar.jsx";
 import Logo from "../ui/Logo.jsx";
-import Footer from "./Footer.jsx";
 
 // Figma `AdminApp`: fixed sidebar from lg up, DaisyUI drawer below.
 function AdminLayout() {
@@ -35,7 +34,6 @@ function AdminLayout() {
         <main className="flex-1 px-5 py-6 md:px-8 md:py-8">
           <Outlet />
         </main>
-        <Footer />
       </div>
 
       <div className="drawer-side z-40">
