@@ -31,6 +31,7 @@ The "Uses" column counts how many times the layer appears in the Figma file. It'
 | `ProfileMenu` | `ProfileMenu` | 1 | Dropdown: Profile · Settings · Log Out |
 | `CafeCard` | `CafeCard` | 64 | 240px wide: image (160px) + `BookmarkBtn` top-right, then name (display font), `MapPin` + area, then `BeanRating` |
 | `CafeRow` | `CafeRow` | 8 | Section title + "See all ›" (accent) + a horizontally scrolling row of `CafeCard`s |
+| `PopularCafeCarousel` *(added)* | — | 1 | Home Popular Cafés banner. Café photo or branded fallback, name, area, description, rating, bookmark and View café. Arrows, swipe, keyboard navigation and pagination; six-second rotation with pause/play, pauses on hover/focus, stops in hidden tabs and respects reduced motion |
 | `CompactCafeRow` | `CompactCafeRow` | 5 | List-style café row: thumbnail, name, full address. Used on the Profile tabs and in search results |
 | `BookmarkBtn` | `BookmarkBtn` | 32 | Round button. Off: `neutral-100` + outline icon. On: `accent` + filled white icon |
 | `SearchOverlay` | `SearchOverlay` / `SearchPopup` | 7 | Panel under the navbar: search input + ×, tabs Cafés / Coffee Drinkers, result list, footer "Can't find your café? Suggest a café" |

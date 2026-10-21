@@ -97,3 +97,12 @@
 .cafe-map-choices button { border-radius: 8px; padding: 8px; text-align: left; font-weight: 500; }
 .cafe-map-choices a { display: block; padding: 0 8px 8px; color: var(--color-accent); font-size: 12px; text-decoration: underline; }
 .cafe-map-choices button:hover, .cafe-map-choices button:focus-visible { background: var(--color-accent-soft); }
+
+@keyframes cafe-banner-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.cafe-banner-enter { animation: cafe-banner-enter 400ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .cafe-banner-enter { animation: none; }
+}
