@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import AdminSidebar from "../admin/AdminSidebar.jsx";
 import Logo from "../ui/Logo.jsx";
@@ -7,6 +7,7 @@ import Logo from "../ui/Logo.jsx";
 // Figma `AdminApp`: fixed sidebar from lg up, DaisyUI drawer below.
 function AdminLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { pathname } = useLocation();
 
   return (
     <div className="drawer lg:drawer-open">
@@ -31,7 +32,7 @@ function AdminLayout() {
           <Logo />
           <span className="text-[11px] font-medium tracking-[0.12em] text-accent uppercase">Admin</span>
         </div>
-        <main className="flex-1 px-5 py-6 md:px-8 md:py-8">
+        <main key={pathname} className="page-enter flex-1 px-5 py-6 md:px-8 md:py-8">
           <Outlet />
         </main>
       </div>

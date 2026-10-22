@@ -97,7 +97,7 @@ function PolicyPage({ type }) {
           </Link>
         </nav>
       </header>
-      <main className="py-10">
+      <main key={type} className="page-enter py-10">
         <h1 className="font-display text-3xl font-semibold md:text-4xl">{policy.title}</h1>
         <p className="mt-3 text-sm text-secondary">Effective <time dateTime="2026-10-20">October 20, 2026</time></p>
         <p className="mt-6 leading-relaxed">{policy.introduction}</p>

@@ -31,10 +31,10 @@ function CafeProfilePage() {
   const goBack = () => (location.key === "default" ? navigate("/") : navigate(-1));
 
   return (
-    <>
+    <div className="page-enter">
       <section className="relative h-[320px] overflow-hidden bg-primary md:h-[384px]">
         {cafe.photo ? (
-          <img src={assetUrl(cafe.photo)} alt="" className="absolute inset-0 size-full object-cover" />
+          <img src={assetUrl(cafe.photo)} alt="" className="cafe-banner-photo-enter absolute inset-0 size-full object-cover" />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-white/10">
             <CoffeeBean size={180} filled={false} />
@@ -102,7 +102,7 @@ function CafeProfilePage() {
           )}
         </section>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -98,6 +98,10 @@
 .cafe-map-choices a { display: block; padding: 0 8px 8px; color: var(--color-accent); font-size: 12px; text-decoration: underline; }
 .cafe-map-choices button:hover, .cafe-map-choices button:focus-visible { background: var(--color-accent-soft); }
 
+@keyframes page-enter {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to { opacity: 1; transform: none; }
+}
 @keyframes cafe-banner-enter {
   from { opacity: 0; transform: translate3d(32px, 0, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
@@ -106,8 +110,9 @@
   from { opacity: 0; transform: scale(1.04); }
   to { opacity: 1; transform: scale(1); }
 }
+.page-enter { animation: page-enter 650ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .cafe-banner-enter { animation: cafe-banner-enter 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-.cafe-banner-photo-enter { animation: cafe-banner-photo-enter 700ms ease-out both; }
+.cafe-banner-photo-enter { animation: cafe-banner-photo-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 @media (prefers-reduced-motion: reduce) {
-  .cafe-banner-enter, .cafe-banner-photo-enter { animation: none; }
+  .page-enter, .cafe-banner-enter, .cafe-banner-photo-enter { animation: none; }
 }

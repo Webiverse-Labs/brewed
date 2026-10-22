@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Outlet, useMatch, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
 import CoffeeBean from "../ui/CoffeeBean.jsx";
 import Logo from "../ui/Logo.jsx";
 import Footer from "./Footer.jsx";
@@ -11,6 +11,7 @@ const CLICK_GAP_MS = 1500;
 // Figma `LandingPage`: shared hero on the left, the route's form card on the right.
 function AuthLayout() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const adminRoute = useMatch("/admin/*");
   const clicks = useRef({ count: 0, last: 0 });
 
@@ -51,7 +52,7 @@ function AuthLayout() {
         </div>
 
         <div className="flex flex-col items-center gap-8">
-          <div className="w-full max-w-[400px] rounded-3xl border border-base-300 bg-surface p-7 shadow-soft">
+          <div key={pathname} className="page-enter w-full max-w-[400px] rounded-3xl border border-base-300 bg-surface p-7 shadow-soft">
             <Outlet />
           </div>
           {/* select-none: rapid clicks would otherwise highlight the text; touch-manipulation stops double-tap zoom */}

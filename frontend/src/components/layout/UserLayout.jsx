@@ -18,7 +18,7 @@ function UserLayout() {
 
   // Any navigation closes search. Reset during render, not in an effect,
   // so the new page never paints with the panel still on top
-  const { key: locationKey } = useLocation();
+  const { key: locationKey, pathname } = useLocation();
   const [prevLocationKey, setPrevLocationKey] = useState(locationKey);
   if (locationKey !== prevLocationKey) {
     setPrevLocationKey(locationKey);
@@ -44,7 +44,9 @@ function UserLayout() {
       <UserNavbar hasUnread={hasUnread} />
       <main className="flex-1 pb-8 md:pb-12">
         {user.emailVerified === false && <VerifyEmailBanner />}
-        <Outlet context={{ openSuggest, openSearch }} />
+        <div key={pathname}>
+          <Outlet context={{ openSuggest, openSearch }} />
+        </div>
       </main>
       <Footer className="pb-20 md:pb-4" />
       <MobileTabBar hasUnread={hasUnread} />
