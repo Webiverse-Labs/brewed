@@ -52,8 +52,8 @@ function AdminLoginPage() {
         <Button type="submit" block className="mt-1" disabled={submitting}>
           {submitting ? "Checking…" : "Access Dashboard"}
         </Button>
-        <Link to="/signup" className="text-center text-sm text-secondary hover:text-base-content">
-          ← Back to Sign Up
+        <Link to="/login" className="text-center text-sm text-secondary hover:text-base-content">
+          ← Back to User Log In
         </Link>
       </form>
     </>

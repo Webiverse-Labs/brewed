@@ -74,17 +74,17 @@ function ProfileMenu({ active, mobile = false }) {
         )}
       >
         <li>
-          <Link to="/profile" onClick={closeMenu} className="min-h-11">
+          <Link to="/profile" onClick={closeMenu} className="min-h-11 content-center">
             <UserRound size={16} /> Profile
           </Link>
         </li>
         <li>
-          <Link to="/settings" onClick={closeMenu} className="min-h-11">
+          <Link to="/settings" onClick={closeMenu} className="min-h-11 content-center">
             <Settings size={16} /> Settings
           </Link>
         </li>
         <li>
-          <button type="button" onClick={handleLogout} className="min-h-11 text-error">
+          <button type="button" onClick={handleLogout} className="min-h-11 content-center text-error">
             <LogOut size={16} /> Log Out
           </button>
         </li>
