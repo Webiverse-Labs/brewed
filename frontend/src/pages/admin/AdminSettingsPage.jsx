@@ -11,7 +11,7 @@ function AdminSettingsPage() {
   const tab = params.get("tab") === "security" ? "security" : "profile";
 
   return (
-    <div className="w-full max-w-6xl">
+    <div className={tab === "security" ? "w-full max-w-6xl" : "w-full"}>
       <AdminHeader title="Admin Settings" subtitle="Manage your administrator profile and account security" />
       <FilterTabs tabs={tabs} value={tab} onChange={(value) => setParams({ tab: value })} label="Admin settings sections" className="mb-6" />
       {tab === "profile" ? <AdminProfileSettings /> : <AdminSecuritySettings />}

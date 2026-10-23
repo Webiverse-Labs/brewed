@@ -1,8 +1,12 @@
 ﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <title>Brewed</title>
   <rect width="32" height="32" rx="8" fill="#fbf9f5" />
-  <g transform="translate(4 4)" fill="#2b1e1a" stroke="#2b1e1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M10.165 6.598C9.954 7.478 9.64 8.36 9 9c-.64.64-1.521.954-2.402 1.165A6 6 0 0 0 8 22c7.732 0 14-6.268 14-14a6 6 0 0 0-11.835-1.402Z" />
-    <path d="M5.341 10.62a4 4 0 1 0 5.279-5.28" />
+  <g transform="translate(-2 -2) scale(1.5)">
+    <path
+      transform="rotate(35 12 12)"
+      fill="#2b1e1a"
+      fill-rule="evenodd"
+      d="M12 2C16 2 19 6.5 19 12S16 22 12 22 5 17.5 5 12 8 2 12 2Z M13.3 3.4C9.2 8.1 15.5 15.3 10.7 20.6C13 15 6.8 8.1 13.3 3.4Z"
+    />
   </g>
 </svg>

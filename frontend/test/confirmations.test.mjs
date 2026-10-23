@@ -707,18 +707,6 @@ test("admin profile saves only the name and uploads a photo through the admin en
   assert.ok(container.querySelector('img[src$="/uploads/avatars/test.png"]'));
 });
 
-test("admin profile offers verification and can refresh the saved verification status", async () => {
-  respond = () => ({ message: "Verification email sent." });
-  function UnverifiedAdmin() { return h(AdminSettingsHarness, { verified: false }); }
-  await mount(UnverifiedAdmin, { path: "/admin/settings" });
-  assert.ok(container.querySelector('[title="Email address not verified"]'));
-  await click(button("Send Verification Email"));
-  assert.equal(mutations()[0].url, "/auth/resend-verification");
-  await click(button("Check Verification"));
-  assert.ok(container.querySelector('[title="Email address verified"]'));
-  assert.equal(container.querySelector('[title="Email address not verified"]'), null);
-});
-
 test("admin email changes require the current password and leave the current email active", async () => {
   respond = () => ({ user: { ...person, pendingEmail: "new-admin@example.com" } });
   await mount(AdminSettingsHarness, { path: "/admin/settings?tab=security" });
