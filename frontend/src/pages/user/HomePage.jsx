@@ -6,6 +6,7 @@ import PopularCafeCarousel from "../../components/cafe/PopularCafeCarousel.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
 import { useApi } from "../../hooks/useApi.js";
+import { cafeSections, sectionPath } from "../../lib/cafeSections.js";
 
 const greeting = () => {
   const hour = new Date().getHours();
@@ -14,22 +15,25 @@ const greeting = () => {
   return "Good evening";
 };
 
+// Popular's "See all" opens search; the other rows open their own section page (/browse/:slug)
 const rows = [
   { title: "Popular Cafés", path: "/cafes?sort=popular&limit=12", banner: true },
-  { title: "Featured Cafés", path: "/cafes?featured=true&limit=12" },
-  { title: "Top Rated", path: "/cafes?sort=rating&limit=12" },
-  { title: "Recently Added", path: "/cafes?sort=new&limit=12" },
+  ...["featured", "top-rated", "recent"].map((slug) => ({
+    title: cafeSections[slug].title,
+    path: `/cafes?${cafeSections[slug].query}&limit=12`,
+    seeAllTo: sectionPath(slug),
+  })),
 ];
 
 // one request per row, so each section loads (or fails) on its own
-function HomeRow({ title, path, banner, onSeeAll }) {
+function HomeRow({ title, path, banner, seeAllTo, onSeeAll }) {
   const { data, loading, error, reload } = useApi(path);
 
   if (loading && !data) return <Loader />;
   if (error) return <LoadError message={error} onRetry={reload} />;
   if (!data.cafes.length) return null;
   if (banner) return <PopularCafeCarousel cafes={data.cafes} onSeeAll={onSeeAll} />;
-  return <CafeRow title={title} cafes={data.cafes} onSeeAll={onSeeAll} />;
+  return <CafeRow title={title} cafes={data.cafes} seeAllTo={seeAllTo} />;
 }
 
 function HomePage() {
