@@ -81,7 +81,7 @@ Layout: 224px `AdminSidebar` on the left (Brewed · Admin label, Dashboard / Caf
 | **Suggestions** | `/admin/suggestions` | `194:4905` | `210:3060` | `GET /api/admin/suggestions?status=pending`: pending submissions only. Approved or rejected records leave the queue immediately; the empty state links admins to Archive. |
 | ↳ detail panel open | | `194:5265` | — | `PATCH /api/admin/suggestions/:id` {status: approved \| rejected} |
 | **Archive** | `/admin/archive` | — | — | Searchable tabs for approved suggestions, rejected suggestions, suspended accounts, and disabled cafés. Reviewed suggestions have read-only details; accounts can be reinstated and cafés enabled after confirmation. |
-| **Settings: Profile** | `/admin/settings` | `194:5125` | `210:3514` | Display name, profile photo, sign-in email verification, and resend/check verification. |
+| **Settings: Profile** | `/admin/settings` | `194:5125` | `210:3514` | Centered administrator profile card with display name and profile photo. |
 | ↳ Security | `/admin/settings?tab=security` | — | — | Confirmed email changes, password changes, sign out other devices, and sign out. Current password is required for sensitive updates. |
 | Mobile sidebar drawer | — | — | `210:2413`, `210:1025`, `210:2758`, `210:3399`, `210:3606` | Same nav as desktop, opened from a hamburger button |
 
