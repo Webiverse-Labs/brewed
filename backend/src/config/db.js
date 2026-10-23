@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import dns from "node:dns";
 
 let connection;
 
@@ -6,15 +7,33 @@ let connection;
 //(the Vercel function has no startup step) as well as once at startup (server.js, seed.js).
 //A failed attempt is forgotten so the next call retries; callers decide what a failure means.
 function connectDB() {
-  connection ??= mongoose
-    //each serverless instance keeps its own pool; 10 keeps many instances well under Atlas Free's 500-connection cap.
-    //10 s instead of 30 s to give up on an unreachable cluster (e.g. Atlas Network Access blocking the host)
-    .connect(process.env.MONGO_URI, { maxPoolSize: 10, serverSelectionTimeoutMS: 10_000 })
-    .then(() => console.log("MongoDB connected"))
+  connection ??= (async () => {
+    try {
+      return await mongoose.connect(process.env.MONGO_URI, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 10_000,
+      });
+    } catch (error) {
+      // On Windows / some local network routers, SRV queries fail with ECONNREFUSED; fall back to public DNS
+      if (error?.code === "ECONNREFUSED" && error?.syscall === "querySrv") {
+        dns.setServers(["8.8.8.8", "1.1.1.1"]);
+        return await mongoose.connect(process.env.MONGO_URI, {
+          maxPoolSize: 10,
+          serverSelectionTimeoutMS: 10_000,
+        });
+      }
+      throw error;
+    }
+  })()
+    .then((conn) => {
+      console.log("MongoDB connected");
+      return conn;
+    })
     .catch((error) => {
       connection = undefined;
       throw error;
     });
+
   return connection;
 }
 
