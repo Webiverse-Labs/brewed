@@ -22,7 +22,7 @@ let vite, root, container, ConfirmationProvider, useConfirmation, AuthContext, A
 let AuthPage, AdminLoginPage, ResetPasswordPage, AdminUsersPage, AdminCafesPage, AdminSuggestionsPage, UserSettingsPage, SecuritySettings, AdminSettingsPage;
 let HomePage, UserLayout, ExplorePage, AdminLayout, AuthLayout, PolicyPage;
 let EmailSettings, ChangeEmailPage;
-let PopularCafeCarousel;
+let PopularCafeCarousel, CafeSectionPage;
 let ask, navigate;
 const requests = [];
 const person = { id: "user-1", name: "Test User", username: "testuser", email: "test@example.com", status: "active", hasPassword: true, emailVerified: true, visits: 0, favorites: [], createdAt: "2026-10-20T00:00:00Z" };
@@ -61,6 +61,7 @@ before(async () => {
   ({ default: EmailSettings } = await load("components/user/EmailSettings.jsx"));
   ({ default: ChangeEmailPage } = await load("pages/auth/ChangeEmailPage.jsx"));
   ({ default: PopularCafeCarousel } = await load("components/cafe/PopularCafeCarousel.jsx"));
+  ({ default: CafeSectionPage } = await load("pages/user/CafeSectionPage.jsx"));
   api.defaults.adapter = async (config) => {
     requests.push({ method: config.method, url: config.url, data: typeof config.data === "string" ? JSON.parse(config.data) : config.data });
     if (!respond) throw new Error(`Unexpected API request: ${config.method} ${config.url}`);
@@ -678,6 +679,7 @@ function HomeScreens() {
     h(Route, { path: "/", element: h(HomePage) }),
     h(Route, { path: "/explore", element: h(ExplorePage) }),
     h(Route, { path: "/cafes/:id", element: h("p", { id: "cafe-detail" }, "Café details") }),
+    h(Route, { path: "/browse/:section", element: h(CafeSectionPage) }),
   ));
 }
 
@@ -857,6 +859,58 @@ test("See all opens blank search and Explore opens the map page", async () => {
   assert.match(container.querySelector("h1").textContent, /Explore cafés/);
   assert.equal(searchPanel(), null);
   assert.ok(container.querySelector('[aria-label="Café locations map"]'));
+});
+
+test("home rows show scroll arrows only toward hidden cafés, and See all opens that section's tiles", async () => {
+  const many = Array.from({ length: 6 }, (_, index) => ({ ...cafe, id: `cafe-${index + 1}`, name: `Café ${index + 1}` }));
+  respond = (config) => ({ cafes: config.url.includes("sort=rating") ? many : [cafe] });
+  await mount(HomeScreens);
+  const section = [...container.querySelectorAll("section")].find((element) => element.querySelector("h2")?.textContent === "Top Rated");
+  const previous = section.querySelector('button[aria-label="Scroll Top Rated left"]');
+  const next = section.querySelector('button[aria-label="Scroll Top Rated right"]');
+  // nothing overflows in the test DOM, so both arrows stay hidden
+  assert.equal(previous.disabled, true);
+  assert.equal(next.disabled, true);
+
+  const scroller = document.getElementById(next.getAttribute("aria-controls"));
+  const scrolls = [];
+  let left = 0;
+  Object.defineProperties(scroller, {
+    clientWidth: { configurable: true, get: () => 500 },
+    scrollWidth: { configurable: true, get: () => 1500 },
+    scrollLeft: { configurable: true, get: () => left },
+    scrollBy: { configurable: true, value: (options) => scrolls.push(options) },
+  });
+  const scrollTo = (position) => act(async () => { left = position; scroller.dispatchEvent(new browser.Event("scroll")); });
+  await scrollTo(0);
+  assert.equal(previous.disabled, true);
+  assert.equal(next.disabled, false);
+  await click(next);
+  assert.equal(scrolls.at(-1).left, 425);
+  await scrollTo(400);
+  assert.equal(previous.disabled, false);
+  assert.equal(next.disabled, false);
+  await click(previous);
+  assert.equal(scrolls.at(-1).left, -425);
+  await scrollTo(1000);
+  assert.equal(previous.disabled, false);
+  assert.equal(next.disabled, true);
+
+  const seeAll = [...section.querySelectorAll("a")].find((element) => element.textContent.trim() === "See all");
+  assert.equal(seeAll.getAttribute("href"), "/browse/top-rated");
+  await click(seeAll);
+  assert.equal(searchPanel(), null);
+  assert.equal(container.querySelector("h1").textContent, "Top Rated");
+  assert.ok(requests.some((request) => request.url === "/cafes?sort=rating&limit=100"));
+  assert.equal(container.querySelectorAll("main ul > li a[href^='/cafes/']").length, many.length);
+  assert.match(container.textContent, /6 cafés/);
+});
+
+test("unknown home sections show the not-found page", async () => {
+  respond = () => ({ cafes: [cafe] });
+  await mount(HomeScreens, { path: "/browse/not-a-section" });
+  assert.match(container.textContent, /Nothing brewing here/);
+  assert.equal(requests.length, 0);
 });
 
 test("map pins group shared locations, select café details, and retain unlocated cafés in the list", async () => {

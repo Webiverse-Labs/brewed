@@ -12,6 +12,7 @@ import VerifyEmailPage from "./pages/auth/VerifyEmailPage.jsx";
 import ChangeEmailPage from "./pages/auth/ChangeEmailPage.jsx";
 import HomePage from "./pages/user/HomePage.jsx";
 import CafeProfilePage from "./pages/user/CafeProfilePage.jsx";
+import CafeSectionPage from "./pages/user/CafeSectionPage.jsx";
 import LogVisitPage from "./pages/user/LogVisitPage.jsx";
 import LogSuccessPage from "./pages/user/LogSuccessPage.jsx";
 import NotificationsPage from "./pages/user/NotificationsPage.jsx";
@@ -72,6 +73,7 @@ export const router = createBrowserRouter([
           { path: "/", element: <HomePage /> },
           { path: "/explore", lazy: async () => ({ Component: (await import("./pages/user/ExplorePage.jsx")).default }) },
           { path: "/cafes/:id", element: <CafeProfilePage /> },
+          { path: "/browse/:section", element: <CafeSectionPage /> },
           { path: "/log", element: <LogVisitPage /> },
           { path: "/log/success", element: <LogSuccessPage /> },
           { path: "/notifications", element: <NotificationsPage /> },

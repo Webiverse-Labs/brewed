@@ -3,12 +3,17 @@ import { MapPin } from "lucide-react";
 import CafeImg from "./CafeImg.jsx";
 import BookmarkBtn from "../ui/BookmarkBtn.jsx";
 import BeanRating from "../ui/BeanRating.jsx";
+import { cn } from "../../lib/cn.js";
 
-function CafeCard({ cafe }) {
+// Fixed width + scroll snapping for horizontal rows; `fluid` lets the card fill a grid cell instead.
+function CafeCard({ cafe, fluid = false }) {
   return (
     <Link
       to={`/cafes/${cafe.id}`}
-      className="group w-60 shrink-0 snap-start overflow-hidden rounded-box border border-base-300 bg-surface transition-shadow hover:shadow-soft focus-visible:outline-2 focus-visible:outline-accent"
+      className={cn(
+        "group overflow-hidden rounded-box border border-base-300 bg-surface transition-shadow hover:shadow-soft focus-visible:outline-2 focus-visible:outline-accent",
+        fluid ? "w-full" : "w-60 shrink-0 snap-start",
+      )}
     >
       <div className="relative h-40">
         <CafeImg cafe={cafe} />
