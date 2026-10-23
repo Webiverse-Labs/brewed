@@ -35,7 +35,7 @@ const logSchema = new mongoose.Schema(
     items: [itemSchema],
     text: { type: String, trim: true, maxlength: 2000, default: "" },
     anonymous: { type: Boolean, default: false }, //reviews only
-    photos: [String], //diary only, "/uploads/logs/<file>"
+    photos: [String], // "/uploads/logs/<file>"
   },
   { timestamps: true },
 );
