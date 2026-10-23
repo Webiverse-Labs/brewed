@@ -15,7 +15,7 @@ export const cafes = [
   { id: "fixture-onyx", name: "Onyx Coffee Lab", area: "Katipunan, Quezon City", address: "310 Katipunan Ave, Loyola Heights, Quezon City", rating: 4.5, visits: 2, photo: null },
 ];
 
-const margot = { id: "fixture-margot", name: "Margot Chen", username: "margotbrews", avatarUrl: "" };
+const margot = { id: "fixture-margot", name: "Margot Chen", username: "margotbrews", avatarUrl: "", emailVerified: true };
 
 export const logs = [
   {

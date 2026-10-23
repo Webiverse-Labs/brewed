@@ -42,7 +42,7 @@ export async function getStats(req, res) {
       User.countDocuments({ role: "user" }),
       User.countDocuments({ role: "user", createdAt: { $gte: weekAgo } }),
       Suggestion.countDocuments({ status: "pending" }),
-      Suggestion.find().sort({ createdAt: -1 }).limit(3).populate("submittedBy", "name username"),
+      Suggestion.find().sort({ createdAt: -1 }).limit(3).populate("submittedBy", "name username emailVerified"),
       User.find({ role: "user" }).sort({ createdAt: -1 }).limit(4),
     ]);
 
@@ -152,7 +152,7 @@ export async function updateUserStatus(req, res) {
 
 //GET /api/admin/suggestions -> newest first
 export async function listSuggestions(req, res) {
-  const suggestions = await Suggestion.find().sort({ createdAt: -1 }).limit(200).populate("submittedBy", "name username");
+  const suggestions = await Suggestion.find().sort({ createdAt: -1 }).limit(200).populate("submittedBy", "name username emailVerified");
   res.json({ suggestions: suggestions.map(suggestionJSON) });
 }
 
@@ -199,7 +199,7 @@ export async function reviewSuggestion(req, res) {
     await notify(suggestion.submittedBy, { type: "system", cafe: cafe?._id, message });
   }
 
-  await suggestion.populate("submittedBy", "name username");
+  await suggestion.populate("submittedBy", "name username emailVerified");
   res.json({ suggestion: suggestionJSON(suggestion), cafe });
 }
 

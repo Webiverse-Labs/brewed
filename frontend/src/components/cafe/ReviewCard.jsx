@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Avatar from "../ui/Avatar.jsx";
+import UserDisplayName from "../ui/UserDisplayName.jsx";
 import BeanRating from "../ui/BeanRating.jsx";
 import { assetUrl } from "../../lib/assetUrl.js";
 import { formatDate } from "../../lib/format.js";
@@ -23,8 +24,8 @@ function ReviewCard({ log, heading = "user" }) {
           <div className="min-w-0">
             {heading === "user" ? (
               author ? (
-                <Link to={`/u/${author.username}`} className="block truncate font-display font-semibold hover:underline">
-                  {author.name}
+                <Link to={`/u/${author.username}`} className="block font-display font-semibold hover:underline">
+                  <UserDisplayName user={author} />
                 </Link>
               ) : (
                 <p className="truncate font-display font-semibold">Anonymous</p>

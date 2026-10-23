@@ -1,5 +1,6 @@
 import { CircleAlert, MapPin, UserRound } from "lucide-react";
 import Avatar from "../ui/Avatar.jsx";
+import UserDisplayName from "../ui/UserDisplayName.jsx";
 import { cn } from "../../lib/cn.js";
 import { timeAgo } from "../../lib/format.js";
 
@@ -28,7 +29,11 @@ function NotificationItem({ notification, onRead }) {
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px]">{notification.message}</span>
+        <span className="block text-[15px]">
+          {notification.type === "follow" && actor ? (
+            <><UserDisplayName user={actor} className="font-medium" /> started following you.</>
+          ) : notification.message}
+        </span>
         <span className="mt-0.5 block text-xs text-secondary">{timeAgo(notification.createdAt)}</span>
       </span>
       {!notification.read && <span className="size-2 shrink-0 rounded-full bg-accent" aria-label="Unread" />}

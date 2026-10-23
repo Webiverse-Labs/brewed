@@ -4,9 +4,10 @@ import { Menu } from "lucide-react";
 import AdminSidebar from "../admin/AdminSidebar.jsx";
 import Logo from "../ui/Logo.jsx";
 
-// Figma `AdminApp`: fixed sidebar from lg up, DaisyUI drawer below.
+// Collapsible desktop sidebar, with a full-width DaisyUI drawer on mobile.
 function AdminLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { pathname } = useLocation();
 
   return (
@@ -25,6 +26,8 @@ function AdminLayout() {
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
+            aria-expanded={drawerOpen}
+            aria-controls="admin-sidebar"
             className="grid size-10 place-items-center rounded-full hover:bg-base-200"
           >
             <Menu size={20} />
@@ -39,7 +42,11 @@ function AdminLayout() {
 
       <div className="drawer-side z-40">
         <label htmlFor="admin-drawer" aria-label="Close menu" className="drawer-overlay" />
-        <AdminSidebar onNavigate={() => setDrawerOpen(false)} />
+        <AdminSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          onNavigate={() => setDrawerOpen(false)}
+        />
       </div>
     </div>
   );

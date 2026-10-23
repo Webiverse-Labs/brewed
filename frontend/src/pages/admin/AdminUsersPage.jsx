@@ -5,6 +5,8 @@ import AdminHeader from "../../components/admin/AdminHeader.jsx";
 import DataTable from "../../components/admin/DataTable.jsx";
 import Avatar from "../../components/ui/Avatar.jsx";
 import Button from "../../components/ui/Button.jsx";
+import EmailVerificationBadge from "../../components/ui/EmailVerificationBadge.jsx";
+import UserDisplayName from "../../components/ui/UserDisplayName.jsx";
 import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
@@ -54,7 +56,7 @@ function AdminUsersPage() {
     <div className="flex min-w-0 items-center gap-3">
       <Avatar name={user.name} src={user.avatarUrl} size="sm" />
       <div className="min-w-0">
-        <p className="truncate font-medium">{user.name}</p>
+        <p className="font-medium"><UserDisplayName user={user} /></p>
         <p className="truncate text-[13px] text-secondary">@{user.username}</p>
       </div>
     </div>
@@ -127,7 +129,7 @@ function AdminUsersPage() {
             <div className="flex items-center gap-3">
               <Avatar name={viewing.name} src={viewing.avatarUrl} size="ml" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-lg font-medium">{viewing.name}</p>
+                <p className="font-display text-lg font-medium"><UserDisplayName user={viewing} /></p>
                 <p className="truncate text-sm text-secondary">@{viewing.username}</p>
               </div>
               <StatusBadge status={viewing.status} />
@@ -144,6 +146,10 @@ function AdminUsersPage() {
                   <dd className="mt-0.5 truncate">{value}</dd>
                 </div>
               ))}
+              <div>
+                <dt className="text-xs font-semibold tracking-wide text-secondary uppercase">Email verification</dt>
+                <dd className="mt-0.5"><EmailVerificationBadge verified={viewing.emailVerified} /></dd>
+              </div>
             </dl>
             <Button
               variant={viewing.status === "active" ? "dangerSoft" : "outline"}

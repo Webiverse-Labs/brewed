@@ -62,7 +62,7 @@ export async function getCafeLogs(req, res) {
   const logs = await Log.find({ cafe: cafe._id, type: "review" })
     .sort({ visitedAt: -1, createdAt: -1 })
     .limit(50)
-    .populate("user", "name username bio avatarUrl createdAt");
+    .populate("user", "name username emailVerified bio avatarUrl createdAt");
   res.json({ logs: logs.map(publicLog) });
 }
 
