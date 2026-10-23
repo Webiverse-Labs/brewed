@@ -26,7 +26,7 @@ function DataTable({ columns, rows, renderRow, renderCard, onRowClick, selectedI
           <thead>
             <tr className="border-base-300 text-xs text-secondary">
               {columns.map((col) => (
-                <th key={col} className="font-medium">
+                <th key={col} className="text-center font-medium">
                   {col}
                 </th>
               ))}

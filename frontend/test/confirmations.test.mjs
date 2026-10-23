@@ -23,6 +23,7 @@ let AuthPage, AdminLoginPage, ResetPasswordPage, AdminUsersPage, AdminCafesPage,
 let HomePage, UserLayout, ExplorePage, AdminLayout, AuthLayout, PolicyPage;
 let EmailSettings, ChangeEmailPage;
 let PopularCafeCarousel, CafeSectionPage;
+let ProfilePage, ReviewCard, NotificationItem;
 let ask, navigate;
 const requests = [];
 const person = { id: "user-1", name: "Test User", username: "testuser", email: "test@example.com", status: "active", hasPassword: true, emailVerified: true, visits: 0, favorites: [], createdAt: "2026-10-20T00:00:00Z" };
@@ -62,6 +63,9 @@ before(async () => {
   ({ default: ChangeEmailPage } = await load("pages/auth/ChangeEmailPage.jsx"));
   ({ default: PopularCafeCarousel } = await load("components/cafe/PopularCafeCarousel.jsx"));
   ({ default: CafeSectionPage } = await load("pages/user/CafeSectionPage.jsx"));
+  ({ default: ProfilePage } = await load("pages/user/ProfilePage.jsx"));
+  ({ default: ReviewCard } = await load("components/cafe/ReviewCard.jsx"));
+  ({ default: NotificationItem } = await load("components/user/NotificationItem.jsx"));
   api.defaults.adapter = async (config) => {
     requests.push({ method: config.method, url: config.url, data: typeof config.data === "string" ? JSON.parse(config.data) : config.data });
     if (!respond) throw new Error(`Unexpected API request: ${config.method} ${config.url}`);
@@ -122,6 +126,51 @@ async function submit(scope = dialog()) {
   await act(async () => scope.querySelector("form").dispatchEvent(new browser.Event("submit", { bubbles: true, cancelable: true })));
 }
 const mutations = () => requests.filter((request) => request.method !== "get");
+
+test("another user's profile shows their verification, independently of the viewer", async () => {
+  const other = { ...person, id: "user-2", name: "Other User", username: "other", isMe: false };
+  respond = ({ url }) => url.endsWith("/visited") ? { cafes: [] } : {
+    user: url === "/users/other" ? other : { ...other, username: "unverified", emailVerified: false },
+  };
+  function Profiles() {
+    return h(Routes, null, h(Route, { path: "/u/:username", element: h(ProfilePage) }));
+  }
+  await mount(Profiles, { path: "/u/other", auth: { user: { ...person, emailVerified: false } } });
+  const heading = container.querySelector("h1");
+  assert.match(heading.textContent, /Other User/);
+  assert.ok(heading.querySelector('[title="Email address verified"]'));
+  await act(async () => navigate("/u/unverified"));
+  assert.match(container.querySelector("h1").textContent, /Other User/);
+  assert.equal(container.querySelector('h1 [title="Email address verified"]'), null);
+});
+
+test("public reviews and follow notifications badge only their identified verified author", async () => {
+  const authors = [person, { ...person, id: "user-2", username: "unverified", emailVerified: false }, null];
+  const read = [];
+  function Identities() {
+    return h(React.Fragment, null, ...authors.flatMap((author, index) => [
+      h(ReviewCard, { key: `review-${index}`, log: { user: author, rating: 3, items: [], visitedAt: person.createdAt } }),
+      h(NotificationItem, {
+        key: `notification-${index}`,
+        notification: { id: `notification-${index}`, actor: author, type: "follow", message: "Someone started following you.", createdAt: person.createdAt },
+        onRead: (id) => read.push(id),
+      }),
+    ]));
+  }
+  await mount(Identities);
+  const reviews = container.querySelectorAll("article");
+  const notifications = container.querySelectorAll("button");
+  for (const elements of [reviews, notifications]) {
+    assert.ok(elements[0].querySelector('[title="Email address verified"]'));
+    assert.equal(elements[1].querySelector('[title="Email address verified"]'), null);
+    assert.equal(elements[2].querySelector('[title="Email address verified"]'), null);
+  }
+  assert.equal(reviews[0].querySelector("a").getAttribute("href"), "/u/testuser");
+  assert.match(reviews[2].textContent, /Anonymous/);
+  assert.equal(reviews[2].querySelector("a"), null);
+  await click(notifications[0]);
+  assert.deepEqual(read, ["notification-0"]);
+});
 
 test("cancel, Escape, close button, and backdrop do not execute the action", async () => {
   await mount();

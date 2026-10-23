@@ -9,7 +9,7 @@ export async function listNotifications(req, res) {
   if (NOTIFICATION_TYPES.includes(req.query.type)) filter.type = req.query.type;
 
   const [notifications, unread] = await Promise.all([
-    Notification.find(filter).sort({ createdAt: -1 }).limit(50).populate("actor", "name username bio avatarUrl createdAt"),
+    Notification.find(filter).sort({ createdAt: -1 }).limit(50).populate("actor", "name username emailVerified bio avatarUrl createdAt"),
     Notification.countDocuments({ user: req.user._id, read: false }),
   ]);
 

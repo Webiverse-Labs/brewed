@@ -2,6 +2,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { Settings } from "lucide-react";
 import Page from "../../components/layout/Page.jsx";
 import Avatar from "../../components/ui/Avatar.jsx";
+import UserDisplayName from "../../components/ui/UserDisplayName.jsx";
 import Button from "../../components/ui/Button.jsx";
 import FollowButton from "../../components/ui/FollowButton.jsx";
 import FilterTabs from "../../components/ui/FilterTabs.jsx";
@@ -93,7 +94,7 @@ function ProfilePage() {
         <div className="flex items-start gap-4">
           <Avatar name={user.name} src={user.avatarUrl} size="lg" />
           <div className="min-w-0 flex-1 pt-1">
-            <h1 className="truncate font-display text-2xl font-medium">{user.name}</h1>
+            <h1 className="font-display text-2xl font-medium"><UserDisplayName user={user} /></h1>
             <p className="text-[15px] text-secondary">@{user.username}</p>
           </div>
           {user.isMe ? (

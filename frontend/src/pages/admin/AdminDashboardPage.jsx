@@ -3,6 +3,7 @@ import AdminHeader from "../../components/admin/AdminHeader.jsx";
 import AdminPanel from "../../components/admin/AdminPanel.jsx";
 import StatCard from "../../components/admin/StatCard.jsx";
 import Avatar from "../../components/ui/Avatar.jsx";
+import UserDisplayName from "../../components/ui/UserDisplayName.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
 import StatusBadge from "../../components/ui/StatusBadge.jsx";
@@ -70,7 +71,7 @@ function AdminDashboardPage() {
               <li key={u.id} className="flex items-center gap-3 py-3">
                 <Avatar name={u.name} src={u.avatarUrl} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium">{u.name}</p>
+                  <p className="text-[15px] font-medium"><UserDisplayName user={u} /></p>
                   <p className="truncate text-[13px] text-secondary">@{u.username}</p>
                 </div>
                 <StatusBadge status={u.status} />

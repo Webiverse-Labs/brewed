@@ -13,6 +13,7 @@ export function publicUser(user) {
     id: String(user._id),
     name: user.name,
     username: user.username,
+    emailVerified: user.emailVerified === true,
     bio: user.bio,
     avatarUrl: user.avatarUrl,
     createdAt: user.createdAt,
