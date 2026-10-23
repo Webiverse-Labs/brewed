@@ -24,30 +24,27 @@ function AdminUsersPage() {
   const confirm = useConfirmation();
   const [query, setQuery] = useState("");
   const q = encodeURIComponent(useDebounced(query.trim()));
-  const { data, loading, error, reload, setData } = useApi(`/admin/users?q=${q}`);
+  const { data, loading, error, reload, setData } = useApi(`/admin/users?status=active&q=${q}`);
   const [viewing, setViewing] = useState(null);
 
-  const shown = data?.users ?? [];
+  const shown = (data?.users ?? []).filter((user) => user.status === "active");
 
-  const toggleSuspend = (user) => {
-    const status = user.status === "active" ? "suspended" : "active";
+  const suspendUser = (user) => {
     return confirm({
-      title: status === "suspended" ? "Suspend this user?" : "Reinstate this user?",
+      title: "Suspend this user?",
       description: <>
         <strong className="text-base-content">{user.name} (@{user.username})</strong>
-        <p className="mt-3">{status === "suspended"
-          ? "This user will lose access to their account until an administrator reinstates them. Their content will be kept."
-          : "This restores the user's access to Brewed."}</p>
+        <p className="mt-3">This user will lose account access and move to Archive. Their content will be kept. Reinstate them from Archive to return them to User Management.</p>
       </>,
-      confirmLabel: status === "suspended" ? "Suspend User" : "Reinstate User",
+      confirmLabel: "Suspend User",
       pendingLabel: "Updating account…",
-      danger: status === "suspended",
+      danger: true,
       onConfirm: async () => {
-        await api.patch(`/admin/users/${user.id}`, { status });
-        //d is null if a search failed meanwhile; the detail modal still updates below
-        setData((d) => d && { ...d, users: d.users.map((u) => (u.id === user.id ? { ...u, status } : u)) });
-        setViewing((v) => (v?.id === user.id ? { ...v, status } : v));
-        toast.success(`${user.name} ${status === "suspended" ? "suspended" : "reinstated"}.`);
+        await api.patch(`/admin/users/${user.id}`, { status: "suspended" });
+        //d is null if a search failed while the suspension was being saved.
+        setData((d) => d && { ...d, users: d.users.filter((u) => u.id !== user.id) });
+        setViewing((v) => v?.id === user.id ? null : v);
+        toast.success(`${user.name} suspended and moved to Archive.`);
       },
     });
   };
@@ -67,15 +64,15 @@ function AdminUsersPage() {
       <Button variant="ghost" size="sm" onClick={() => setViewing(user)}>
         View
       </Button>
-      <Button variant={user.status === "active" ? "dangerSoft" : "outline"} size="sm" onClick={() => toggleSuspend(user)}>
-        {user.status === "active" ? "Suspend" : "Reinstate"}
+      <Button variant="dangerSoft" size="sm" onClick={() => suspendUser(user)}>
+        Suspend
       </Button>
     </div>
   );
 
   return (
     <>
-      <AdminHeader title="User Management" subtitle="View and moderate registered Brewed users">
+      <AdminHeader title="User Management" subtitle="Manage active accounts. Suspended accounts are in Archive.">
         <TextInput
           look="outlined"
           icon={Search}
@@ -85,6 +82,7 @@ function AdminUsersPage() {
           onChange={(e) => setQuery(e.target.value)}
           className="sm:w-64"
         />
+        <Button to="/admin/archive?tab=users" variant="outline">Suspended Accounts</Button>
       </AdminHeader>
 
       {loading && !data ? (
@@ -95,7 +93,7 @@ function AdminUsersPage() {
       <DataTable
         columns={columns}
         rows={shown}
-        emptyText={query.trim() ? "No users match your search." : "No users yet."}
+        emptyText={query.trim() ? "No active users match your search." : "No active accounts. Suspended accounts are in Archive."}
         renderRow={(user) => (
           <>
             <td>{who(user)}</td>
@@ -152,11 +150,11 @@ function AdminUsersPage() {
               </div>
             </dl>
             <Button
-              variant={viewing.status === "active" ? "dangerSoft" : "outline"}
-              onClick={() => toggleSuspend(viewing)}
+              variant="dangerSoft"
+              onClick={() => suspendUser(viewing)}
               className="self-start"
             >
-              {viewing.status === "active" ? "Suspend user" : "Reinstate user"}
+              Suspend user
             </Button>
           </div>
         )}

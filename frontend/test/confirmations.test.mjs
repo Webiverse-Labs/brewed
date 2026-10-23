@@ -21,9 +21,10 @@ const { default: react } = await import("@vitejs/plugin-react");
 let vite, root, container, ConfirmationProvider, useConfirmation, AuthContext, AuthProvider, api;
 let AuthPage, AdminLoginPage, ResetPasswordPage, AdminUsersPage, AdminCafesPage, AdminSuggestionsPage, UserSettingsPage, SecuritySettings, AdminSettingsPage;
 let HomePage, UserLayout, ExplorePage, AdminLayout, AuthLayout, PolicyPage;
-let EmailSettings, ChangeEmailPage;
+let EmailSettings, ChangeEmailPage, VerifyEmailPage;
 let PopularCafeCarousel, CafeSectionPage;
 let ProfilePage, ReviewCard, NotificationItem;
+let AdminArchivePage;
 let ask, navigate;
 const requests = [];
 const person = { id: "user-1", name: "Test User", username: "testuser", email: "test@example.com", status: "active", hasPassword: true, emailVerified: true, visits: 0, favorites: [], createdAt: "2026-10-20T00:00:00Z" };
@@ -50,6 +51,7 @@ before(async () => {
   ({ default: AdminUsersPage } = await load("pages/admin/AdminUsersPage.jsx"));
   ({ default: AdminCafesPage } = await load("pages/admin/AdminCafesPage.jsx"));
   ({ default: AdminSuggestionsPage } = await load("pages/admin/AdminSuggestionsPage.jsx"));
+  ({ default: AdminArchivePage } = await load("pages/admin/AdminArchivePage.jsx"));
   ({ default: UserSettingsPage } = await load("pages/user/UserSettingsPage.jsx"));
   ({ default: SecuritySettings } = await load("components/user/SecuritySettings.jsx"));
   ({ default: AdminSettingsPage } = await load("pages/admin/AdminSettingsPage.jsx"));
@@ -61,6 +63,7 @@ before(async () => {
   ({ default: ExplorePage } = await load("pages/user/ExplorePage.jsx"));
   ({ default: EmailSettings } = await load("components/user/EmailSettings.jsx"));
   ({ default: ChangeEmailPage } = await load("pages/auth/ChangeEmailPage.jsx"));
+  ({ default: VerifyEmailPage } = await load("pages/auth/VerifyEmailPage.jsx"));
   ({ default: PopularCafeCarousel } = await load("components/cafe/PopularCafeCarousel.jsx"));
   ({ default: CafeSectionPage } = await load("pages/user/CafeSectionPage.jsx"));
   ({ default: ProfilePage } = await load("pages/user/ProfilePage.jsx"));
@@ -417,22 +420,21 @@ test("signup blocks mismatched passwords and submits only the matching password"
   assert.deepEqual(signups, [{ name: "Test Person", email: "new@example.com", password: "test-password-123", acceptedPolicies: true }]);
 });
 
-for (const status of ["active", "suspended"]) {
-  test(`admin ${status === "active" ? "suspension" : "reinstatement"} waits for confirmation from user details`, async () => {
-    respond = (config) => config.method === "get" ? { users: [{ ...person, status }] } : {};
+  test("suspending a user waits for confirmation and closes their details after archiving", async () => {
+    respond = (config) => config.method === "get" ? { users: [person] } : {};
     await mount(AdminUsersPage);
     await click(button("View"));
-    await click(button(status === "active" ? "Suspend user" : "Reinstate user"));
+    await click(button("Suspend user"));
     assert.equal(mutations().length, 0);
     assert.match(dialog().textContent, /Test User/);
     await click(button("Cancel", dialog()));
     assert.equal(mutations().length, 0);
-    await click(button(status === "active" ? "Suspend user" : "Reinstate user"));
+    await click(button("Suspend user"));
     await submit();
-    assert.deepEqual(mutations(), [{ method: "patch", url: "/admin/users/user-1", data: { status: status === "active" ? "suspended" : "active" } }]);
-    assert.ok(container.querySelector('dialog[role="dialog"][open]'), "User details should remain open");
+    assert.deepEqual(mutations(), [{ method: "patch", url: "/admin/users/user-1", data: { status: "suspended" } }]);
+    assert.equal(container.querySelector('dialog[role="dialog"][open]'), null);
+    assert.equal(container.querySelector("tbody tr"), null);
   });
-}
 
 test("permanent account deletion needs DELETE and runs only once after confirmation", async () => {
   const updates = [];
@@ -449,14 +451,59 @@ test("permanent account deletion needs DELETE and runs only once after confirmat
   assert.deepEqual(updates, [null]);
 });
 
-for (const active of [true, false]) {
-  test(`café ${active ? "disable" : "enable"} waits for confirmation`, async () => {
-    respond = (config) => config.method === "get" ? { cafes: [{ ...cafe, active }] } : { cafe: { ...cafe, active: !active } };
+  test("disabling a café waits for confirmation and removes it from management", async () => {
+    respond = (config) => config.method === "get" ? { cafes: [cafe] } : { cafe: { ...cafe, active: false } };
     await mount(AdminCafesPage);
-    await click(button(active ? "Disable" : "Enable"));
+    await click(button("Disable"));
     assert.equal(mutations().length, 0);
     await submit();
-    assert.deepEqual(mutations()[0], { method: "patch", url: "/admin/cafes/cafe-1", data: { active: !active } });
+    assert.deepEqual(mutations()[0], { method: "patch", url: "/admin/cafes/cafe-1", data: { active: false } });
+    assert.equal(container.querySelector("tbody tr"), null);
+  });
+
+for (const kind of ["users", "cafes"]) {
+  test(`${kind} leave management for Archive and return only after restoration`, async () => {
+    let record = kind === "users" ? { ...person } : { ...cafe };
+    let failed = true;
+    const isActive = () => kind === "users" ? record.status === "active" : record.active;
+    respond = (config) => {
+      if (config.method === "get") {
+        const activeList = config.url.includes(kind === "users" ? "status=active" : "active=true");
+        return { [kind]: isActive() === activeList ? [record] : [] };
+      }
+      if (failed) throw { response: { status: 503, data: { message: "Could not archive record." } } };
+      record = { ...record, ...JSON.parse(config.data) };
+      return { [kind === "users" ? "user" : "cafe"]: record };
+    };
+    function Screens() {
+      return h(Routes, null,
+        h(Route, { path: `/admin/${kind}`, element: h(kind === "users" ? AdminUsersPage : AdminCafesPage) }),
+        h(Route, { path: "/admin/archive", element: h(AdminArchivePage) }),
+      );
+    }
+    const managementPath = `/admin/${kind}`;
+    const archivePath = `/admin/archive?tab=${kind}`;
+    await mount(Screens, { path: managementPath });
+    assert.ok(requests.some((request) => request.url === `${managementPath}?${kind === "users" ? "status=active" : "active=true"}&q=`));
+    await click(button(kind === "users" ? "Suspend" : "Disable"));
+    await submit();
+    assert.match(dialog().querySelector('[role="alert"]').textContent, /Could not archive record/);
+    assert.ok(container.querySelector("tbody tr"), "Failed status updates must leave the record in management");
+    failed = false;
+    await submit();
+    assert.equal(container.querySelector("tbody tr"), null);
+    await click(container.querySelector(`a[href="${archivePath}"]`));
+    assert.match(container.querySelector("tbody").textContent, new RegExp(record.name));
+    await act(async () => navigate(managementPath));
+    assert.equal(container.querySelector("tbody tr"), null, "Archived records must stay hidden after returning to management");
+    await act(async () => navigate(archivePath));
+    await click(button(kind === "users" ? "Reinstate" : "Enable"));
+    await submit();
+    assert.equal(container.querySelector("tbody tr"), null);
+    await act(async () => navigate(managementPath));
+    assert.match(container.querySelector("tbody").textContent, new RegExp(record.name));
+    await act(async () => navigate(archivePath));
+    assert.equal(container.querySelector("tbody tr"), null, "Restored records must stay out of Archive after reloading");
   });
 }
 
@@ -469,8 +516,110 @@ for (const status of ["approved", "rejected"]) {
     assert.equal(mutations().length, 0);
     await submit();
     assert.deepEqual(mutations()[0], { method: "patch", url: "/admin/suggestions/suggestion-1", data: { status } });
+    assert.match(container.textContent, /All caught up\. No pending suggestions/);
+    assert.equal(container.querySelector('dialog[role="dialog"][open]'), null);
+    assert.equal(container.querySelector("tbody tr"), null);
   });
 }
+
+test("suggestions hide reviewed records, retain pending records on failure, and retry safely", async () => {
+  let failed = true;
+  respond = (config) => {
+    if (config.method === "get") return { suggestions: [suggestion, { ...suggestion, id: "reviewed", name: "Already reviewed", status: "approved" }] };
+    if (failed) throw { response: { status: 503, data: { message: "Could not save decision." } } };
+    return { suggestion: { ...suggestion, status: "approved" } };
+  };
+  await mount(AdminSuggestionsPage);
+  assert.doesNotMatch(container.textContent, /Already reviewed/);
+  await click(button("Review"));
+  await click(button("Approve"));
+  await submit();
+  assert.match(dialog().querySelector('[role="alert"]').textContent, /Could not save decision/);
+  assert.ok(container.querySelector("tbody tr"));
+  failed = false;
+  await submit();
+  assert.match(container.textContent, /All caught up/);
+  assert.equal(container.querySelector("tbody tr"), null);
+});
+
+test("reviewed suggestions leave the queue and remain viewable in the archive after navigation", async () => {
+  let record = suggestion;
+  respond = (config) => {
+    if (config.method === "patch") {
+      record = { ...record, status: "approved", reviewedAt: person.createdAt };
+      return { suggestion: record };
+    }
+    const approved = config.url.includes("status=approved");
+    return { suggestions: record.status === (approved ? "approved" : "pending") ? [record] : [] };
+  };
+  function Screens() {
+    return h(Routes, null,
+      h(Route, { path: "/admin/suggestions", element: h(AdminSuggestionsPage) }),
+      h(Route, { path: "/admin/archive", element: h(AdminArchivePage) }),
+    );
+  }
+  await mount(Screens, { path: "/admin/suggestions" });
+  await click(button("Review"));
+  await click(button("Approve"));
+  await submit();
+  assert.match(container.textContent, /All caught up/);
+  await click(container.querySelector('a[href="/admin/archive"]'));
+  assert.match(container.querySelector("tbody").textContent, /Suggested Café/);
+  await click(button("View"));
+  const details = container.querySelector('dialog[role="dialog"][open]');
+  assert.match(details.textContent, /Reviewed on/);
+  assert.equal([...details.querySelectorAll("button")].some((element) => ["Approve", "Reject"].includes(element.textContent.trim())), false);
+  await click(details.querySelector('button[aria-label="Close"]'));
+  await click(button("Rejected cafés"));
+  assert.match(container.textContent, /No rejected café suggestions/);
+});
+
+for (const kind of ["users", "cafes"]) {
+  test(`archive restores ${kind} only after confirmation and removes the restored record`, async () => {
+    let failed = true;
+    const record = kind === "users" ? { ...person, status: "suspended" } : { ...cafe, active: false, updatedAt: person.createdAt };
+    respond = (config) => {
+      if (config.method === "get") return { [kind]: [record] };
+      if (failed) throw { response: { status: 503, data: { message: "Restoration unavailable." } } };
+      return kind === "users" ? { user: { ...record, status: "active" } } : { cafe: { ...record, active: true } };
+    };
+    await mount(AdminArchivePage, { path: `/admin/archive?tab=${kind}` });
+    assert.ok(requests.some((request) => request.url.includes(kind === "users" ? "status=suspended" : "active=false")));
+    const action = kind === "users" ? "Reinstate" : "Enable";
+    await click(button(action));
+    assert.equal(mutations().length, 0);
+    await click(button("Cancel", dialog()));
+    assert.ok(container.querySelector("tbody tr"));
+    await click(button(action));
+    await submit();
+    assert.match(dialog().querySelector('[role="alert"]').textContent, /Restoration unavailable/);
+    assert.ok(container.querySelector("tbody tr"));
+    failed = false;
+    await submit();
+    assert.deepEqual(mutations().at(-1), {
+      method: "patch", url: `/admin/${kind}/${record.id}`, data: kind === "users" ? { status: "active" } : { active: true },
+    });
+    assert.equal(container.querySelector("tbody tr"), null);
+    assert.match(container.textContent, kind === "users" ? /No suspended accounts/ : /No disabled cafés/);
+  });
+}
+
+test("archive search encodes input, distinguishes empty results, and offers retry on failure", async () => {
+  let failed = true;
+  respond = () => {
+    if (failed) throw { response: { status: 503, data: { message: "Archive unavailable." } } };
+    return { suggestions: [] };
+  };
+  await mount(AdminArchivePage);
+  assert.match(container.textContent, /Archive unavailable/);
+  failed = false;
+  await click(button("Try again"));
+  assert.match(container.textContent, /No approved café suggestions/);
+  await fill(container.querySelector('[aria-label="Search archive"]'), " Elm & Oak ");
+  await settleSearch();
+  assert.ok(requests.some((request) => request.url === "/admin/suggestions?status=approved&q=Elm%20%26%20Oak"));
+  assert.match(container.textContent, /No archived records match your search/);
+});
 
 for (const hasPassword of [true, false]) {
   test(`${hasPassword ? "password update" : "first password"} reminders block invalid submissions and return focus to the field`, async () => {
@@ -532,17 +681,137 @@ test("password change can be cancelled without losing input or sending a request
   assert.deepEqual(mutations()[0], { method: "patch", url: "/users/me/password", data: { current: "old-test-password", next: "new-test-password" } });
 });
 
-test("changing the admin sign-in email requires confirmation", async () => {
-  respond = () => ({ user: { ...person, email: "new-admin@example.com" } });
-  await mount(AdminSettingsPage, { auth: { setUser: () => {} } });
-  await fill(container.querySelector('[name="email"]'), "new-admin@example.com");
+function AdminSettingsHarness({ verified = true }) {
+  const [user, setUser] = React.useState({ ...person, role: "admin", emailVerified: verified });
+  return h(AuthContext, { value: {
+    user, setUser,
+    updateUser: (patch) => setUser((previous) => ({ ...previous, ...patch })),
+    refresh: async () => setUser((previous) => ({ ...previous, emailVerified: true })),
+    logout: async () => false,
+  } }, h(AdminSettingsPage));
+}
+
+test("admin profile saves only the name and uploads a photo through the admin endpoint", async () => {
+  respond = (config) => ({ user: { ...person, role: "admin", name: "Updated Admin", ...(config.url.endsWith("avatar") ? { avatarUrl: "/uploads/avatars/test.png" } : {}) } });
+  await mount(AdminSettingsHarness, { path: "/admin/settings" });
+  assert.equal(container.querySelector('[name="email"]'), null);
+  assert.ok(container.querySelector('[title="Email address verified"]'));
+  await fill(container.querySelector('[name="name"]'), " Updated Admin ");
   await click(button("Save Changes"));
+  assert.deepEqual(mutations()[0], { method: "patch", url: "/admin/me", data: { name: "Updated Admin" } });
+  const input = container.querySelector('input[type="file"]');
+  Object.defineProperty(input, "files", { configurable: true, value: [new browser.File(["png"], "avatar.png", { type: "image/png" })] });
+  await act(async () => input.dispatchEvent(new browser.Event("change", { bubbles: true })));
+  assert.equal(mutations()[1].url, "/admin/me/avatar");
+  assert.equal(mutations()[1].data.get("avatar").name, "avatar.png");
+  assert.ok(container.querySelector('img[src$="/uploads/avatars/test.png"]'));
+});
+
+test("admin profile offers verification and can refresh the saved verification status", async () => {
+  respond = () => ({ message: "Verification email sent." });
+  function UnverifiedAdmin() { return h(AdminSettingsHarness, { verified: false }); }
+  await mount(UnverifiedAdmin, { path: "/admin/settings" });
+  assert.ok(container.querySelector('[title="Email address not verified"]'));
+  await click(button("Send Verification Email"));
+  assert.equal(mutations()[0].url, "/auth/resend-verification");
+  await click(button("Check Verification"));
+  assert.ok(container.querySelector('[title="Email address verified"]'));
+  assert.equal(container.querySelector('[title="Email address not verified"]'), null);
+});
+
+test("admin email changes require the current password and leave the current email active", async () => {
+  respond = () => ({ user: { ...person, pendingEmail: "new-admin@example.com" } });
+  await mount(AdminSettingsHarness, { path: "/admin/settings?tab=security" });
+  await fill(container.querySelector('[name="email"]'), "new-admin@example.com");
+  await click(button("Update Email"));
+  assert.match(dialog().textContent, /Enter your current password/);
+  await click(button("Got it", dialog()));
+  await fill(container.querySelector('[name="emailCurrentPassword"]'), "current-admin-password");
+  await click(button("Update Email"));
   assert.equal(mutations().length, 0);
   assert.match(dialog().textContent, /new-admin@example.com/);
   await submit();
-  assert.equal(mutations()[0].url, "/admin/me");
+  assert.equal(mutations()[0].url, "/admin/me/email");
   assert.equal(mutations()[0].data.email, "new-admin@example.com");
+  assert.equal(mutations()[0].data.currentPassword, "current-admin-password");
+  assert.match(container.textContent, /Current email: test@example.com/);
+  assert.match(container.textContent, /Waiting for confirmation from new-admin@example.com/);
+  await click(button("Cancel Email Change"));
+  await click(button("Cancel Email Change", dialog()));
+  assert.equal(mutations()[1].method, "delete");
+  assert.equal(mutations()[1].url, "/admin/me/email");
 });
+
+test("admin password changes validate matching fields, confirm, and preserve the form on failure", async () => {
+  let failed = true;
+  respond = () => {
+    if (failed) throw { response: { status: 400, data: { message: "Current password is incorrect." } } };
+    return {};
+  };
+  await mount(AdminSettingsHarness, { path: "/admin/settings?tab=security" });
+  const form = container.querySelector('[aria-label="Change admin password"]');
+  await click(button("Update Password", form));
+  assert.match(dialog().textContent, /fill out all password fields/);
+  await click(button("Got it", dialog()));
+  await fill(form.querySelector('[name="current"]'), "old-admin-password");
+  await fill(form.querySelector('[name="next"]'), "new-admin-password");
+  await fill(form.querySelector('[name="confirm"]'), "different-password");
+  await click(button("Update Password", form));
+  assert.match(dialog().textContent, /don't match/);
+  assert.equal(mutations().length, 0);
+  await click(button("Got it", dialog()));
+  await fill(form.querySelector('[name="confirm"]'), "new-admin-password");
+  await click(button("Update Password", form));
+  assert.match(dialog().textContent, /other devices will be signed out/);
+  await click(button("Cancel", dialog()));
+  assert.equal(mutations().length, 0);
+  await click(button("Update Password", form));
+  await submit();
+  assert.match(dialog().querySelector('[role="alert"]').textContent, /Current password is incorrect/);
+  assert.equal(form.querySelector('[name="next"]').value, "new-admin-password");
+  failed = false;
+  await submit();
+  assert.deepEqual(mutations().at(-1), { method: "patch", url: "/admin/me/password", data: { current: "old-admin-password", next: "new-admin-password" } });
+  assert.equal(form.querySelector('[name="current"]').value, "");
+  assert.equal(form.querySelector('[name="next"]').value, "");
+});
+
+test("signing out other admin devices requires a password and confirmation", async () => {
+  respond = () => ({});
+  await mount(AdminSettingsHarness, { path: "/admin/settings?tab=security" });
+  const form = container.querySelector('[aria-label="Sign out other devices"]');
+  await click(button("Sign Out Other Devices", form));
+  assert.match(dialog().textContent, /Enter your current password/);
+  await click(button("Got it", dialog()));
+  await fill(form.querySelector("input"), "admin-password");
+  await click(button("Sign Out Other Devices", form));
+  assert.equal(mutations().length, 0);
+  await click(button("Cancel", dialog()));
+  assert.equal(mutations().length, 0);
+  await click(button("Sign Out Other Devices", form));
+  await submit();
+  assert.deepEqual(mutations()[0], { method: "post", url: "/admin/me/sign-out-others", data: { currentPassword: "admin-password" } });
+  assert.equal(form.querySelector("input").value, "");
+});
+
+test("confirmed admin email changes return to Admin Access using the server's account type", async () => {
+  respond = () => ({ adminLoginRequired: true, message: "Email updated. Sign in through Admin Access." });
+  await mount(ChangeEmailPage, { path: "/change-email#token=test-admin-token", auth: { setUser: () => {} } });
+  await click(button("Confirm Email"));
+  assert.ok(container.querySelector('a[href="/admin/login"]'));
+  assert.equal(container.querySelector('a[href="/login"]'), null);
+});
+
+for (const signedIn of [false, true]) {
+  test(`admin verification links return to the correct page when ${signedIn ? "signed in" : "logged out"}`, async () => {
+    respond = () => ({ adminLoginRequired: true, message: "Email verified." });
+    await mount(VerifyEmailPage, { path: "/verify-email#token=test-admin-verification", auth: {
+      user: signedIn ? { ...person, role: "admin" } : null, refresh: async () => {},
+    } });
+    assert.match(container.textContent, /Your administrator email is verified/);
+    assert.ok(container.querySelector(`a[href="${signedIn ? "/admin/settings" : "/admin/login"}"]`));
+  });
+}
 
 test("user email update validates fields, waits for confirmation, and preserves the current email", async () => {
   const patches = [];

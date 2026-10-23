@@ -25,6 +25,7 @@ function SuggestionDetail({ suggestion, onDecide, busy, bare }) {
     ["Notes", suggestion.notes],
     ["Submitted by", suggestion.submittedBy ? `@${suggestion.submittedBy.username}` : "Deleted account"],
     ["Submitted on", formatDate(suggestion.createdAt)],
+    ["Reviewed on", formatDate(suggestion.reviewedAt)],
   ].filter(([, value]) => value);
 
   return (

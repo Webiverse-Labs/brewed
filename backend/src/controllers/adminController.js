@@ -55,7 +55,12 @@ export async function getStats(req, res) {
 
 //GET /api/admin/cafes?q= -> every café, including disabled ones
 export async function listAllCafes(req, res) {
-  const cafes = await Cafe.find(cafeSearchFilter(req.query.q)).sort({ createdAt: -1 }).limit(200);
+  const filter = cafeSearchFilter(req.query.q);
+  if (req.query.active !== undefined) {
+    if (!["true", "false"].includes(req.query.active)) throw new ApiError(400, "Active must be true or false.");
+    filter.active = req.query.active === "true";
+  }
+  const cafes = await Cafe.find(filter).sort({ createdAt: -1 }).limit(200);
   res.json({ cafes });
 }
 
@@ -116,6 +121,10 @@ export async function updateCafe(req, res) {
 //GET /api/admin/users?q= -> users with their visit counts
 export async function listUsers(req, res) {
   const filter = { role: "user" };
+  if (req.query.status !== undefined) {
+    if (!["active", "suspended"].includes(req.query.status)) throw new ApiError(400, "Status must be active or suspended.");
+    filter.status = req.query.status;
+  }
   if (req.query.q) {
     const re = containsRegex(req.query.q);
     filter.$or = [{ name: re }, { username: re }, { email: re }];
@@ -150,9 +159,16 @@ export async function updateUserStatus(req, res) {
   res.json({ user: { ...publicUser(user), email: user.email, status: user.status } });
 }
 
-//GET /api/admin/suggestions -> newest first
+//GET /api/admin/suggestions?status=pending|approved|rejected&q= -> pending queue by default
 export async function listSuggestions(req, res) {
-  const suggestions = await Suggestion.find().sort({ createdAt: -1 }).limit(200).populate("submittedBy", "name username emailVerified");
+  const status = req.query.status ?? "pending";
+  if (!["pending", "approved", "rejected"].includes(status)) throw new ApiError(400, "Status must be pending, approved or rejected.");
+  const filter = { status };
+  if (req.query.q) {
+    const re = containsRegex(req.query.q);
+    filter.$or = [{ name: re }, { address: re }];
+  }
+  const suggestions = await Suggestion.find(filter).sort({ reviewedAt: -1, createdAt: -1 }).limit(200).populate("submittedBy", "name username emailVerified");
   res.json({ suggestions: suggestions.map(suggestionJSON) });
 }
 
@@ -203,9 +219,10 @@ export async function reviewSuggestion(req, res) {
   res.json({ suggestion: suggestionJSON(suggestion), cafe });
 }
 
-//PATCH /api/admin/me { name?, email? }
+//PATCH /api/admin/me { name? }; email changes must prove ownership of the new inbox.
 export async function updateAdminMe(req, res) {
-  Object.assign(req.user, pick(req.body, ["name", "email"]));
+  if (req.body?.email !== undefined) throw new ApiError(400, "Use Update Email in Security to confirm a new email address.");
+  Object.assign(req.user, pick(req.body, ["name"]));
   await req.user.save();
   res.json({ user: await mePayload(req.user) });
 }

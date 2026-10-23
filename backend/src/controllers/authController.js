@@ -3,6 +3,7 @@ import { ApiError } from "../lib/ApiError.js";
 import { clearAuthCookie, setAuthCookie } from "../lib/generateToken.js";
 import { mePayload } from "../lib/userPayload.js";
 import { createToken, discardEmailChange, hashToken } from "../lib/emailTokens.js";
+import { resetAdminPassword } from "./adminAccountController.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email.js";
 import { verifyGoogleCredential } from "../lib/google.js";
 import { policyAcceptance } from "../lib/policies.js";
@@ -111,7 +112,7 @@ export async function verifyEmail(req, res) {
     user.emailVerified = true;
     await user.save();
   }
-  res.json({ message: "Email verified." });
+  res.json({ adminLoginRequired: user.role === "admin", message: "Email verified." });
 }
 
 //POST /api/auth/resend-verification -> logged-in users only; one email per minute
@@ -162,6 +163,11 @@ export async function resetPassword(req, res) {
   if (user.status === "suspended") throw new ApiError(403, "This account has been suspended.");
 
   //following the emailed link proves they own the inbox, so the address counts as verified too
+  if (user.role === "admin") {
+    if (!(await resetAdminPassword(user, hash, password))) throw invalidLink;
+    clearAuthCookie(res);
+    return res.json({ adminLoginRequired: true, message: "Password updated. Sign in through Admin Access." });
+  }
   user.set({ password: String(password), emailVerified: true, resetTokenHash: undefined, resetTokenExpires: undefined });
   discardEmailChange(user);
   await user.validate(); //a too-short password is refused here, before the link is used up
@@ -175,10 +181,6 @@ export async function resetPassword(req, res) {
   if (!claimed.modifiedCount) throw invalidLink;
   await user.save();
 
-  if (user.role === "admin") {
-    clearAuthCookie(res);
-    return res.json({ adminLoginRequired: true, message: "Password updated. Sign in through Admin Access." });
-  }
   setAuthCookie(res, user);
   res.json({ user: await mePayload(user) });
 }

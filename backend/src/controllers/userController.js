@@ -11,6 +11,7 @@ import { containsRegex, isObjectId, pick } from "../lib/queryHelpers.js";
 import { mePayload, publicUser } from "../lib/userPayload.js";
 import { fileUrl, removeUpload } from "../middlewares/uploadMiddleware.js";
 import { discardEmailChange } from "../lib/emailTokens.js";
+import { changeAdminPassword } from "./adminAccountController.js";
 
 //ids (as strings) among `userIds` that the viewer follows
 async function followedIds(viewer, userIds) {
@@ -134,6 +135,7 @@ export async function updateAvatar(req, res) {
 
 //PATCH /api/users/me/password { current, next }
 export async function changePassword(req, res) {
+  if (req.user.role === "admin") return changeAdminPassword(req, res);
   const { current, next } = req.body ?? {};
   const user = await User.findById(req.user._id).select("+password");
   //a Google-only account has no current password: this is how it sets its first one

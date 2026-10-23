@@ -19,8 +19,8 @@ function VerifyEmailPage() {
     sent.current = true;
     api
       .post("/auth/verify-email", { token })
-      .then(() => {
-        setResult({ status: "success" });
+      .then(({ data }) => {
+        setResult({ status: "success", adminLoginRequired: data.adminLoginRequired === true });
         return refresh(); // if they're logged in here, clear the banner
       })
       .catch((err) => setResult({ status: "error", message: errorMessage(err) }));
@@ -39,17 +39,19 @@ function VerifyEmailPage() {
           <h2 className="mt-1 mb-2 font-display text-2xl font-medium">{verified ? "Email verified" : "Link didn't work"}</h2>
           <p className="mb-6 text-[15px] text-secondary">
             {verified
-              ? "Thanks! You can now post reviews, suggest cafés and follow people."
+              ? result.adminLoginRequired ? "Your administrator email is verified." : "Thanks! You can now post reviews, suggest cafés and follow people."
               : `${result.message} ${
                   user?.emailVerified
                     ? "Your own email is already verified, so you don't need it."
+                    : user?.role === "admin"
+                      ? "Open Admin Settings → Profile to request a new verification email."
                     : user
                       ? "Use the banner at the top to get a new one."
                       : "Log in to ask for a new one."
                 }`}
           </p>
-          <Button to={user ? "/" : "/login"} block>
-            {user ? "Continue to Brewed" : "Log In"}
+          <Button to={user?.role === "admin" ? "/admin/settings" : result.adminLoginRequired ? "/admin/login" : user ? "/" : "/login"} block>
+            {user?.role === "admin" ? "Return to Admin Settings" : result.adminLoginRequired ? "Admin Access" : user ? "Continue to Brewed" : "Log In"}
           </Button>
         </>
       )}

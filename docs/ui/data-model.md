@@ -104,7 +104,10 @@ Errors are always `{ message }` with the right status: 400 bad input, 401 not lo
 | `GET /admin/stats` | 🛡️ | Totals, last-7-day counts, recent suggestions and users |
 | `GET /admin/cafes?q=` · `POST /admin/cafes` · `PATCH /admin/cafes/:id` | 🛡️ | Includes disabled cafés. Create and edit are multipart (`photos[]`). `PATCH { active }` to disable or enable |
 | `GET /admin/users?q=` · `PATCH /admin/users/:id { status }` | 🛡️ | Admins can't be suspended |
-| `GET /admin/suggestions` · `PATCH /admin/suggestions/:id { status }` | 🛡️ | Only pending suggestions can be reviewed (otherwise 409) |
-| `PATCH /admin/me { name?, email? }` | 🛡️ | |
+| `GET /admin/suggestions?status=pending\|approved\|rejected&q=` · `PATCH /admin/suggestions/:id { status }` | 🛡️ | Lists pending by default; reviewed suggestions remain in Archive. Only pending suggestions can be reviewed (otherwise 409). Archive also uses `GET /admin/users?status=suspended&q=` and `GET /admin/cafes?active=false&q=`. |
+| `PATCH /admin/me { name? }` · `POST /admin/me/avatar` (multipart `avatar`) | 🛡️ | Profile edits cannot change email, role, or verification. Photo uploads use the same validated image storage as user avatars. |
+| `PATCH /admin/me/email { email, currentPassword }` · `DELETE /admin/me/email` | 🛡️ | Requests or cancels a pending email update. Current email stays active until confirmation, with the same expiry, cooldown, and delivery-failure rollback as regular users. |
+| `PATCH /admin/me/password { current, next }` | 🛡️ | Rechecks current password, atomically updates the hash, cancels pending email/recovery links, revokes other sessions, and renews this browser's cookie. |
+| `POST /admin/me/sign-out-others { currentPassword }` | 🛡️ | Rechecks the password, revokes other sessions, and keeps this browser signed in. |
 
 Uploaded images are served from `http://localhost:4000/uploads/…`. The frontend turns those paths into full URLs with `lib/assetUrl.js`.

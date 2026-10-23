@@ -2,6 +2,9 @@ import jwt from "jsonwebtoken";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Accounts created before sessionVersion was added authenticate as version zero.
+export const matchSessionVersion = (version = 0) => version === 0 ? { $in: [0, null] } : version;
+
 //httpOnly: JS in the browser can't read it; sameSite lax: sent from localhost:5173 -> :4000 (same site)
 const cookieOptions = () => ({
   httpOnly: true,

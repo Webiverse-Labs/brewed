@@ -75,12 +75,14 @@ Layout: 224px `AdminSidebar` on the left (Brewed · Admin label, Dashboard / Caf
 |---|---|---|---|---|
 | **Admin login** | `/admin/login` | `193:207` | `210:700` | `POST /api/admin/login` |
 | **Dashboard** | `/admin` | `193:312` | `210:514` | `GET /api/admin/stats` (total cafés, users, pending suggestions + weekly deltas), recent suggestions, recent users |
-| **Cafés** | `/admin/cafes` | `194:546` | `210:1324` | `GET /api/cafes?q=`: table of Café · Location · Rating · Visits · Actions (Edit / Disable) |
+| **Cafés** | `/admin/cafes` | `194:546` | `210:1324` | `GET /api/admin/cafes?active=true&q=`: active cafés only. Disabling removes the row immediately; enabling in Archive returns it here. |
 | ↳ Add Café modal | | `194:1129` | `210:3856` | `POST /api/cafes` (multipart): name, address, hours, tags, description, photos |
-| **Users** | `/admin/users` | `194:4657` | `210:2482` | `GET /api/admin/users?q=`: User · Email · Visits · Joined · Status · Actions (View / Suspend) |
-| **Suggestions** | `/admin/suggestions` | `194:4905` | `210:3060` | `GET /api/suggestions`: Café Name · Submitted By · Date · Status · Actions. Empty detail panel reads "Select a suggestion to view details" |
-| ↳ detail panel open | | `194:5265` | — | `PATCH /api/suggestions/:id` {status: approved \| rejected} |
-| **Settings** | `/admin/settings` | `194:5125` | `210:3514` | `PATCH /api/admin/me` (display name, email) |
+| **Users** | `/admin/users` | `194:4657` | `210:2482` | `GET /api/admin/users?status=active&q=`: active accounts only. Suspending removes the row and closes its details; reinstating in Archive returns it here. |
+| **Suggestions** | `/admin/suggestions` | `194:4905` | `210:3060` | `GET /api/admin/suggestions?status=pending`: pending submissions only. Approved or rejected records leave the queue immediately; the empty state links admins to Archive. |
+| ↳ detail panel open | | `194:5265` | — | `PATCH /api/admin/suggestions/:id` {status: approved \| rejected} |
+| **Archive** | `/admin/archive` | — | — | Searchable tabs for approved suggestions, rejected suggestions, suspended accounts, and disabled cafés. Reviewed suggestions have read-only details; accounts can be reinstated and cafés enabled after confirmation. |
+| **Settings: Profile** | `/admin/settings` | `194:5125` | `210:3514` | Display name, profile photo, sign-in email verification, and resend/check verification. |
+| ↳ Security | `/admin/settings?tab=security` | — | — | Confirmed email changes, password changes, sign out other devices, and sign out. Current password is required for sensitive updates. |
 | Mobile sidebar drawer | — | — | `210:2413`, `210:1025`, `210:2758`, `210:3399`, `210:3606` | Same nav as desktop, opened from a hamburger button |
 
 No admin screenshots have been exported yet. Save them as `screens/admin/<route-name>.png`.
