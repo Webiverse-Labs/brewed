@@ -38,9 +38,7 @@ export async function createLog(req, res) {
     if (!cafe) throw new ApiError(400, "That café isn't available.");
 
     const type = body.type === "diary" ? "diary" : "review";
-    const photos = type === "diary" ? (req.files ?? []).map((file) => fileUrl("logs", file)) : [];
-    //reviews don't take photos in the design, so don't keep files sent with one
-    if (type === "review") discardUploads(req);
+    const photos = (req.files ?? []).map((file) => fileUrl("logs", file));
 
     const log = await Log.create({
       user: req.user._id,

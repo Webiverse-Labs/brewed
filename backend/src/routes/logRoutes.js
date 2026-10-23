@@ -6,6 +6,6 @@ import { upload } from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", protect, requireVerified, upload("logs").array("photos", 6), asyncHandler(createLog));
+router.post("/", protect, requireVerified, upload("logs").array("photos", 3), asyncHandler(createLog));
 
 export default router;
