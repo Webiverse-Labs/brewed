@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Coffee, LayoutDashboard, Lightbulb, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Users, X } from "lucide-react";
+import { Archive, Coffee, LayoutDashboard, Lightbulb, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Users, X } from "lucide-react";
 import Logo from "../ui/Logo.jsx";
 import { cn } from "../../lib/cn.js";
 import { useAuth } from "../../hooks/useAuth.js";
@@ -9,6 +9,7 @@ const links = [
   { to: "/admin/cafes", label: "Cafés", icon: Coffee },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/suggestions", label: "Suggestions", icon: Lightbulb },
+  { to: "/admin/archive", label: "Archive", icon: Archive },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

@@ -59,7 +59,9 @@ export function sendVerificationEmail(user, rawToken) {
     subject: "Verify your email for Brewed",
     ...template({
       name: user.name,
-      intro: "Welcome to Brewed! Confirm your email to post reviews, suggest cafés and follow people.",
+      intro: user.role === "admin"
+        ? "Confirm the email address for your Brewed administrator account."
+        : "Welcome to Brewed! Confirm your email to post reviews, suggest cafés and follow people.",
       button: "Verify my email",
       url,
       outro: "This link works for 24 hours. If you didn't create a Brewed account, you can ignore this email.",

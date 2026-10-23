@@ -11,7 +11,6 @@ import Button from "../../components/ui/Button.jsx";
 import DashedUpload from "../../components/ui/DashedUpload.jsx";
 import Field from "../../components/ui/Field.jsx";
 import Modal from "../../components/ui/Modal.jsx";
-import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
@@ -26,17 +25,17 @@ function AdminCafesPage() {
   const confirm = useConfirmation();
   const [query, setQuery] = useState("");
   const q = encodeURIComponent(useDebounced(query.trim()));
-  const { data, loading, error, reload, setData } = useApi(`/admin/cafes?q=${q}`);
+  const { data, loading, error, reload, setData } = useApi(`/admin/cafes?active=true&q=${q}`);
   const [editing, setEditing] = useState(null); // null | "new" | café being edited
   const [photos, setPhotos] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  const rows = data?.cafes ?? [];
+  const rows = (data?.cafes ?? []).filter((cafe) => cafe.active === true);
   const isNew = editing === "new";
 
   //d is null if a search failed while this request was in flight; the error view (with Retry) is showing then
   const replaceRow = (cafe) =>
-    setData((d) => d && { ...d, cafes: d.cafes.map((c) => (c.id === cafe.id ? cafe : c)) });
+    setData((d) => d && { ...d, cafes: d.cafes.map((c) => (c.id === cafe.id ? cafe : c)).filter((c) => c.active === true) });
 
   //bumps on every open, so a slow save can't close an editor that was opened after it started
   const editorSession = useRef(0);
@@ -46,21 +45,20 @@ function AdminCafesPage() {
     setEditing(target);
   };
 
-  const toggleActive = (cafe) => confirm({
-    title: cafe.active ? "Disable this café?" : "Enable this café?",
+  const disableCafe = (cafe) => confirm({
+    title: "Disable this café?",
     description: <>
       <strong className="text-base-content">{cafe.name}</strong>
-      <p className="mt-3">{cafe.active
-        ? "This hides the café from discovery. Existing visit records will be kept. You can enable it again later."
-        : "This makes the café visible in discovery again."}</p>
+      <p className="mt-3">This hides the café from discovery and moves it to Archive. Existing visit records will be kept. Enable it from Archive to return it to Café Management.</p>
     </>,
-    confirmLabel: cafe.active ? "Disable Café" : "Enable Café",
+    confirmLabel: "Disable Café",
     pendingLabel: "Updating café…",
-    danger: cafe.active,
+    danger: true,
     onConfirm: async () => {
-      const { data: res } = await api.patch(`/admin/cafes/${cafe.id}`, { active: !cafe.active });
+      const { data: res } = await api.patch(`/admin/cafes/${cafe.id}`, { active: false });
       replaceRow(res.cafe);
-      toast.success(`${cafe.name} ${res.cafe.active ? "enabled" : "disabled"}.`);
+      setEditing((current) => current?.id === cafe.id ? null : current);
+      toast.success(`${cafe.name} disabled and moved to Archive.`);
     },
   });
 
@@ -96,14 +94,8 @@ function AdminCafesPage() {
       <Button variant="ghost" size="sm" onClick={() => openEditor(cafe)}>
         <Pencil size={14} /> Edit
       </Button>
-      <Button variant={cafe.active ? "dangerSoft" : "outline"} size="sm" onClick={() => toggleActive(cafe)}>
-        {cafe.active ? (
-          <>
-            <Ban size={14} /> Disable
-          </>
-        ) : (
-          "Enable"
-        )}
+      <Button variant="dangerSoft" size="sm" onClick={() => disableCafe(cafe)}>
+        <Ban size={14} /> Disable
       </Button>
     </div>
   );
@@ -115,14 +107,13 @@ function AdminCafesPage() {
       </div>
       <div className="min-w-0">
         <p className="truncate font-medium">{cafe.name}</p>
-        {!cafe.active && <StatusBadge status="disabled" className="mt-0.5" />}
       </div>
     </div>
   );
 
   return (
     <>
-      <AdminHeader title="Café Management" subtitle="Browse, edit, and manage all cafés on Brewed">
+      <AdminHeader title="Café Management" subtitle="Manage active cafés. Disabled cafés are in Archive.">
         <TextInput
           look="outlined"
           icon={Search}
@@ -132,6 +123,7 @@ function AdminCafesPage() {
           onChange={(e) => setQuery(e.target.value)}
           className="sm:w-64"
         />
+        <Button to="/admin/archive?tab=cafes" variant="outline">Disabled Cafés</Button>
         <Button onClick={() => openEditor("new")}>
           <Plus size={16} /> Add New Café
         </Button>
@@ -145,10 +137,10 @@ function AdminCafesPage() {
       <DataTable
         columns={columns}
         rows={rows}
-        emptyText={query.trim() ? "No cafés match your search." : "No cafés yet."}
+        emptyText={query.trim() ? "No active cafés match your search." : "No active cafés. Disabled cafés are in Archive."}
         renderRow={(cafe) => (
           <>
-            <td className={cafe.active ? "" : "opacity-60"}>{nameCell(cafe, "size-10")}</td>
+            <td>{nameCell(cafe, "size-10")}</td>
             <td className="text-secondary">{cafe.area}</td>
             <td>
               <BeanRating value={cafe.rating} size={12} />

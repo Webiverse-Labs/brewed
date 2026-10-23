@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Archive } from "lucide-react";
 import toast from "react-hot-toast";
 import AdminHeader from "../../components/admin/AdminHeader.jsx";
 import DataTable from "../../components/admin/DataTable.jsx";
@@ -18,11 +19,11 @@ const columns = ["Café Name", "Submitted By", "Date", "Status", "Actions"];
 
 function AdminSuggestionsPage() {
   const confirm = useConfirmation();
-  const { data, loading, error, reload, setData } = useApi("/admin/suggestions");
+  const { data, loading, error, reload, setData } = useApi("/admin/suggestions?status=pending");
   const [selectedId, setSelectedId] = useState(null);
   const [deciding, setDeciding] = useState(false);
   const wide = useMediaQuery("(min-width: 1280px)");
-  const rows = data?.suggestions ?? [];
+  const rows = (data?.suggestions ?? []).filter((suggestion) => suggestion.status === "pending");
   const selected = rows.find((s) => s.id === selectedId);
 
   //approving publishes the café and notifies the submitter (server side)
@@ -41,8 +42,9 @@ function AdminSuggestionsPage() {
     onConfirm: async () => {
       setDeciding(true);
       try {
-        const { data: res } = await api.patch(`/admin/suggestions/${suggestion.id}`, { status });
-        setData((d) => d && { ...d, suggestions: d.suggestions.map((s) => (s.id === suggestion.id ? res.suggestion : s)) });
+        await api.patch(`/admin/suggestions/${suggestion.id}`, { status });
+        setData((d) => d && { ...d, suggestions: d.suggestions.filter((s) => s.id !== suggestion.id) });
+        setSelectedId((id) => id === suggestion.id ? null : id);
         toast.success(status === "approved" ? `${suggestion.name} approved and published.` : `${suggestion.name} rejected.`);
       } finally {
         setDeciding(false);
@@ -62,16 +64,18 @@ function AdminSuggestionsPage() {
 
   return (
     <>
-      <AdminHeader title="Café Suggestions" subtitle="Review and action user-submitted café suggestions" />
+      <AdminHeader title="Café Suggestions" subtitle="Review pending café suggestions. Completed decisions are saved in Archive.">
+        <Button to="/admin/archive" variant="outline"><Archive size={16} /> View Archive</Button>
+      </AdminHeader>
 
       {loading && !data && <Loader />}
       {error && <LoadError message={error} onRetry={reload} />}
-      {data && (
-      <div className="grid items-start gap-6 xl:grid-cols-[1fr_320px]">
+      {data && !error && (
+      <div className={`grid items-start gap-6 ${rows.length ? "xl:grid-cols-[1fr_320px]" : ""}`}>
         <DataTable
           columns={columns}
           rows={rows}
-          emptyText="No suggestions yet."
+          emptyText="All caught up. No pending suggestions. Approved and rejected suggestions are in Archive."
           selectedId={selectedId}
           onRowClick={(s) => setSelectedId(s.id)}
           renderRow={(s) => (
@@ -98,7 +102,7 @@ function AdminSuggestionsPage() {
           )}
         />
 
-        {wide && (
+        {wide && rows.length > 0 && (
           <aside className="sticky top-8">
             <SuggestionDetail suggestion={selected} onDecide={decide} busy={deciding} />
           </aside>

@@ -48,6 +48,10 @@ Users can update their email in **Settings → Security → Update Email**. Ente
 Run `npm run lint` and `npm run build` from the root to verify the frontend.
 Run `npm test --prefix frontend` for the [confirmation dialog interaction tests](docs/confirmation-dialogs.md), which use mocked API responses.
 
+Admin **Suggestions** shows pending submissions only. Approving or rejecting one removes it from the queue immediately and keeps its details in **Archive**. Suspended accounts and disabled cafés also leave their management pages immediately and stay in Archive. Reinstating an account or enabling a café returns it to its management page after confirmation.
+
+Admin **Settings → Profile** supports display name, profile photo, and email verification. **Security** supports password changes, verified email updates, and signing out other devices. Sensitive changes require the current password. A password change signs out other devices while retaining this browser; a confirmed email change signs out every session and returns the admin to Admin Access. The old email remains active until the new inbox is confirmed.
+
 ### Café search and Explore map
 
 The home search opens live café results. **Explore** (`/explore`) shows an interactive Leaflet map using [OpenStreetMap tiles](https://operations.osmfoundation.org/policies/tiles/) with attribution; internet access is required, and no API key is needed. Cafés in the same building share a pin. Cafés without coordinates remain in the list.

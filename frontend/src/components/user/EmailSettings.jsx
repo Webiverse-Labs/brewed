@@ -10,12 +10,13 @@ import api from "../../lib/api.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useConfirmation } from "../../hooks/useConfirmation.js";
 
-function EmailSettings() {
+function EmailSettings({ admin = false }) {
   const { user, updateUser } = useAuth();
   const confirm = useConfirmation();
   const [saving, setSaving] = useState(false);
   const [reminder, setReminder] = useState(null);
   const hasPassword = user.hasPassword !== false;
+  const endpoint = admin ? "/admin/me/email" : "/users/me/email";
 
   const requestChange = async (event) => {
     event.preventDefault();
@@ -38,7 +39,7 @@ function EmailSettings() {
       onConfirm: async () => {
         setSaving(true);
         try {
-          const { data } = await api.patch("/users/me/email", { email, currentPassword: fields.get("emailCurrentPassword") });
+          const { data } = await api.patch(endpoint, { email, currentPassword: fields.get("emailCurrentPassword") });
           updateUser({ pendingEmail: data.user.pendingEmail });
           form.reset();
           toast.success("Confirmation sent. Check your new email.");
@@ -53,16 +54,18 @@ function EmailSettings() {
     confirmLabel: "Cancel Email Change",
     pendingLabel: "Cancelling…",
     onConfirm: async () => {
-      await api.delete("/users/me/email");
+      await api.delete(endpoint);
       updateUser({ pendingEmail: undefined });
       toast.success("Email change cancelled.");
     },
   });
 
   return (
-    <section className="flex flex-col gap-4" aria-label="Update email">
-      <SectionLabel>Update Email</SectionLabel>
-      <p className="text-[13px] text-secondary">Current email: <strong className="break-all font-medium text-base-content">{user.email}</strong></p>
+    <section className={admin ? "flex h-full min-w-0 flex-col gap-4" : "flex flex-col gap-4"} aria-label="Update email">
+      <div className={admin ? "flex flex-col gap-2" : "flex flex-col gap-4"}>
+        <SectionLabel>Update Email</SectionLabel>
+        <p className="text-[13px] text-secondary">Current email: <strong className="break-all font-medium text-base-content">{user.email}</strong></p>
+      </div>
       {user.pendingEmail && (
         <div role="status" className="rounded-box border border-base-300 bg-base-100 p-4 text-sm">
           <p>Waiting for confirmation from <strong className="break-all">{user.pendingEmail}</strong>.</p>
@@ -71,7 +74,7 @@ function EmailSettings() {
         </div>
       )}
       {hasPassword ? (
-        <form onSubmit={requestChange} noValidate className="flex flex-col gap-4">
+        <form onSubmit={requestChange} noValidate className={admin ? "flex flex-1 flex-col gap-4" : "flex flex-col gap-4"}>
           <Field label="New Email">
             <TextInput type="email" name="email" required maxLength={254} autoComplete="email" placeholder="Enter your new email address" disabled={saving} />
           </Field>
@@ -79,7 +82,7 @@ function EmailSettings() {
             <PasswordInput name="emailCurrentPassword" required autoComplete="current-password" disabled={saving} />
           </Field>
           <p className="text-[13px] text-secondary">Confirm the link sent to your new email, then sign in again.</p>
-          <Button type="submit" className="self-start" disabled={saving}>{saving ? "Sending…" : "Update Email"}</Button>
+          <Button type="submit" className={admin ? "mt-auto self-start" : "self-start"} disabled={saving}>{saving ? "Sending…" : "Update Email"}</Button>
         </form>
       ) : (
         <p className="text-[13px] text-secondary">You signed in with Google. <a href="#password-settings" className="font-medium text-accent underline">Set an account password below</a> before updating your email. Your Google sign-in will stay connected.</p>

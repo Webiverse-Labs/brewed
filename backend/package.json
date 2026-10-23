@@ -19,7 +19,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/seed.js",
-    "smoke": "node scripts/smoke.mjs && node scripts/smoke_security.mjs && node scripts/smoke_google.mjs && node scripts/smoke_email_change.mjs"
+    "smoke": "node scripts/smoke.mjs && node scripts/smoke_security.mjs && node scripts/smoke_google.mjs && node scripts/smoke_email_change.mjs && node scripts/smoke_admin_settings.mjs"
   },
   "author": "Wion M. Quintela",
   "license": "ISC",

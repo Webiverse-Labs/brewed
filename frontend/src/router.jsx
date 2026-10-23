@@ -23,6 +23,7 @@ import AdminDashboardPage from "./pages/admin/AdminDashboardPage.jsx";
 import AdminCafesPage from "./pages/admin/AdminCafesPage.jsx";
 import AdminUsersPage from "./pages/admin/AdminUsersPage.jsx";
 import AdminSuggestionsPage from "./pages/admin/AdminSuggestionsPage.jsx";
+import AdminArchivePage from "./pages/admin/AdminArchivePage.jsx";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import PolicyPage from "./pages/legal/PolicyPage.jsx";
@@ -94,6 +95,7 @@ export const router = createBrowserRouter([
           { path: "cafes", element: <AdminCafesPage /> },
           { path: "users", element: <AdminUsersPage /> },
           { path: "suggestions", element: <AdminSuggestionsPage /> },
+          { path: "archive", element: <AdminArchivePage /> },
           { path: "settings", element: <AdminSettingsPage /> },
         ],
       },

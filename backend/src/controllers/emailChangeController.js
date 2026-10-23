@@ -2,7 +2,7 @@ import User from "../models/User.js";
 import { ApiError } from "../lib/ApiError.js";
 import { createToken, hashToken } from "../lib/emailTokens.js";
 import { sendEmailChangeEmail, sendEmailChangedNotice } from "../lib/email.js";
-import { clearAuthCookie } from "../lib/generateToken.js";
+import { clearAuthCookie, matchSessionVersion } from "../lib/generateToken.js";
 import { mePayload } from "../lib/userPayload.js";
 
 const TTL = 24 * 60 * 60 * 1000;
@@ -11,6 +11,14 @@ const pendingFields = { pendingEmail: 1, emailChangeFrom: 1, emailChangeTokenHas
 
 // A password proves account ownership; the emailed link proves ownership of the new inbox.
 export async function requestEmailChange(req, res) {
+  return requestEmailChangeForRole(req, res, "user");
+}
+
+export async function requestAdminEmailChange(req, res) {
+  return requestEmailChangeForRole(req, res, "admin");
+}
+
+async function requestEmailChangeForRole(req, res, role) {
   const { email, currentPassword } = req.body ?? {};
   if (typeof email !== "string" || email.trim().length > 254 || !/^\S+@\S+\.\S+$/.test(email.trim())) {
     throw new ApiError(400, "Enter a valid email address.");
@@ -18,7 +26,8 @@ export async function requestEmailChange(req, res) {
   const address = email.trim().toLowerCase();
   const user = await User.findById(req.user._id).select("+password");
   if (!user) throw new ApiError(401, "Please log in to continue.");
-  if (user.role !== "user") throw new ApiError(403, "Update your admin email in Admin Settings.");
+  if (user.role !== role) throw new ApiError(403, "Update your email in your account's Settings page.");
+  if ((user.sessionVersion ?? 0) !== (req.user.sessionVersion ?? 0)) throw new ApiError(401, "Please sign in again.");
   if (!user.password) throw new ApiError(400, "Set an account password before updating your email.");
   if (typeof currentPassword !== "string" || !(await user.comparePassword(currentPassword))) {
     throw new ApiError(400, "Current password is incorrect.");
@@ -29,7 +38,7 @@ export async function requestEmailChange(req, res) {
   const { raw, hash } = createToken();
   const now = new Date();
   const updated = await User.findOneAndUpdate({
-    _id: user._id, email: user.email, password: user.password, status: "active",
+    _id: user._id, role, email: user.email, password: user.password, status: "active", sessionVersion: matchSessionVersion(user.sessionVersion ?? 0),
     $or: [{ emailChangeSentAt: { $exists: false } }, { emailChangeSentAt: { $lt: new Date(now - COOLDOWN) } }],
   }, { $set: {
     pendingEmail: address, emailChangeFrom: user.email, emailChangeTokenHash: hash,
@@ -56,10 +65,12 @@ export async function confirmEmailChange(req, res) {
   const invalid = new ApiError(400, "This email change link is invalid or has expired.");
   if (typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) throw invalid;
   const hash = hashToken(token);
-  const filter = { emailChangeTokenHash: hash, emailChangeTokenExpires: { $gt: new Date() }, status: "active", role: "user" };
+  const filter = { emailChangeTokenHash: hash, emailChangeTokenExpires: { $gt: new Date() }, status: "active", role: { $in: ["user", "admin"] } };
   const user = await User.findOne(filter).select("+emailChangeFrom");
   if (!user?.pendingEmail || user.email !== user.emailChangeFrom) throw invalid;
-  if (await User.exists({ email: user.pendingEmail })) throw new ApiError(409, "That email address is already in use. Request a different address in Settings.");
+  // A concurrent confirmation may already have assigned the address to this same account.
+  // Let the conditional token update reject that replay; only a different account is a conflict.
+  if (await User.exists({ email: user.pendingEmail, _id: { $ne: user._id } })) throw new ApiError(409, "That email address is already in use. Request a different address in Settings.");
   const previousEmail = user.email;
   const changed = await User.findOneAndUpdate({ ...filter, _id: user._id, email: previousEmail, pendingEmail: user.pendingEmail }, {
     $set: { email: user.pendingEmail, emailVerified: true },
@@ -73,5 +84,7 @@ export async function confirmEmailChange(req, res) {
   if (!changed) throw invalid;
   clearAuthCookie(res);
   try { await sendEmailChangedNotice(changed, previousEmail); } catch { console.error("Couldn't send the email-change notice."); }
-  res.json({ message: "Email updated. Sign in with your new email address." });
+  res.json({ adminLoginRequired: changed.role === "admin", message: changed.role === "admin"
+    ? "Email updated. Sign in with your new email through Admin Access."
+    : "Email updated. Sign in with your new email address." });
 }
