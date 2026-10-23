@@ -62,7 +62,8 @@ function CafeRow({ title, cafes, seeAllTo }) {
         onClick={() => scrollByPage(direction)}
         className={cn(
           // vertically centred on the whole card (the -0.25rem offsets the scroller's pb-2)
-          "absolute top-[calc(50%-0.25rem)] z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full border border-base-300 bg-surface/90 text-primary shadow-soft backdrop-blur-sm",
+          // hidden on mobile, visible only on desktop (md breakpoint and up)
+          "hidden md:grid absolute top-[calc(50%-0.25rem)] z-10 size-9 -translate-y-1/2 place-items-center rounded-full border border-base-300 bg-surface/90 text-primary shadow-soft backdrop-blur-sm",
           "transition-[opacity,visibility,scale,background-color] duration-200 hover:scale-105 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none",
           next ? "right-2" : "left-2",
           visible ? "visible opacity-100" : "invisible scale-90 opacity-0",
