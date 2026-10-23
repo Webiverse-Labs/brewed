@@ -153,7 +153,7 @@ function LogVisitPage() {
               placeholder="Describe your visit…"
               aria-label="Written review"
             />
-            <DashedUpload icon={Camera} label="Click to upload photos" multiple onChange={setPhotos} />
+            <DashedUpload icon={Camera} label="Click to upload photos (up to 3)" multiple max={3} onChange={setPhotos} />
             {type === "review" && (
               <label className="flex cursor-pointer items-center justify-between gap-4 rounded-box border border-base-300 bg-surface p-4">
                 <span>
@@ -259,7 +259,7 @@ function LogVisitPage() {
                     <Camera size={13} /> Photos
                   </span>
                   <span className="font-medium text-base-content">
-                    {photos.length} {photos.length === 1 ? "photo" : "photos"}
+                    {photos.length} / 3
                   </span>
                 </div>
               )}
