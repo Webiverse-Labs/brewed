@@ -6,7 +6,9 @@ import AdminHeader from "../../components/admin/AdminHeader.jsx";
 import DataTable from "../../components/admin/DataTable.jsx";
 import SuggestionDetail from "../../components/admin/SuggestionDetail.jsx";
 import Avatar from "../../components/ui/Avatar.jsx";
+import BeanRating from "../../components/ui/BeanRating.jsx";
 import Button from "../../components/ui/Button.jsx";
+import EmailVerificationBadge from "../../components/ui/EmailVerificationBadge.jsx";
 import FilterTabs from "../../components/ui/FilterTabs.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
@@ -15,6 +17,7 @@ import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
 import UserDisplayName from "../../components/ui/UserDisplayName.jsx";
 import api from "../../lib/api.js";
+import { assetUrl } from "../../lib/assetUrl.js";
 import { formatDate } from "../../lib/format.js";
 import { useApi } from "../../hooks/useApi.js";
 import { useConfirmation } from "../../hooks/useConfirmation.js";
@@ -51,6 +54,7 @@ function ArchiveEntries({ category, query }) {
         ...current,
         [category.collection]: current[category.collection].filter((row) => row.id !== record.id),
       });
+      setViewing((current) => current?.id === record.id ? null : current);
       toast.success(`${record.name} ${isUser ? "reinstated" : "enabled"}.`);
     },
   });
@@ -74,11 +78,13 @@ function ArchiveEntries({ category, query }) {
     </>
   );
   const date = (record) => formatDate(isSuggestion ? record.reviewedAt : isUser ? record.createdAt : record.updatedAt) || "—";
-  const status = (record) => <StatusBadge status={category.collection === "cafes" ? "disabled" : record.status} />;
   const action = (record) => isSuggestion ? (
     <Button variant="outline" size="sm" onClick={() => setViewing(record)}>View</Button>
   ) : (
-    <Button variant="outline" size="sm" onClick={() => restore(record)}>{isUser ? "Reinstate" : "Enable"}</Button>
+    <div className="flex gap-1.5">
+      <Button variant="ghost" size="sm" onClick={() => setViewing(record)}>View</Button>
+      <Button variant="outline" size="sm" onClick={() => restore(record)}>{isUser ? "Reinstate" : "Enable"}</Button>
+    </div>
   );
 
   if (loading) return <Loader />;
@@ -87,25 +93,94 @@ function ArchiveEntries({ category, query }) {
   return (
     <>
       <DataTable
-        columns={[isUser ? "User" : "Café", isUser ? "Email" : "Details", category.dateLabel, "Status", "Actions"]}
+        columns={[isUser ? "User" : "Café", isUser ? "Email" : "Details", category.dateLabel, "Actions"]}
         rows={rows}
         emptyText={query ? "No archived records match your search." : category.empty}
         renderRow={(record) => <>
           <td>{name(record)}</td>
           <td className="text-secondary">{details(record)}</td>
           <td className="whitespace-nowrap">{date(record)}</td>
-          <td>{status(record)}</td>
           <td>{action(record)}</td>
         </>}
         renderCard={(record) => <>
-          <div className="flex items-start justify-between gap-3">{name(record)}{status(record)}</div>
+          {name(record)}
           <div className="mt-2 text-[13px] text-secondary">{details(record)}</div>
           <p className="mt-1 text-xs text-secondary">{category.dateLabel}: {date(record)}</p>
           <div className="mt-3">{action(record)}</div>
         </>}
       />
-      <Modal open={viewing !== null} onClose={() => setViewing(null)} title="Archived suggestion">
-        <SuggestionDetail suggestion={viewing} bare />
+      <Modal
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={isSuggestion ? "Archived suggestion" : isUser ? "User details" : "Café details"}
+        size={isSuggestion ? undefined : "sm"}
+      >
+        {viewing && (isSuggestion ? (
+          <SuggestionDetail suggestion={viewing} bare />
+        ) : isUser ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <Avatar name={viewing.name} src={viewing.avatarUrl} size="ml" />
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-lg font-medium"><UserDisplayName user={viewing} /></p>
+                <p className="truncate text-sm text-secondary">@{viewing.username}</p>
+              </div>
+              <StatusBadge status={viewing.status} />
+            </div>
+            {viewing.bio && <p className="text-[15px]">{viewing.bio}</p>}
+            <dl className="grid grid-cols-2 gap-3 text-[15px]">
+              {[
+                ["Email", viewing.email],
+                ["Visits logged", viewing.visits],
+                ["Joined", formatDate(viewing.createdAt)],
+              ].map(([term, value]) => (
+                <div key={term} className={term === "Email" ? "col-span-2" : undefined}>
+                  <dt className="text-xs font-semibold tracking-wide text-secondary uppercase">{term}</dt>
+                  <dd className="mt-0.5 truncate">{value}</dd>
+                </div>
+              ))}
+              <div>
+                <dt className="text-xs font-semibold tracking-wide text-secondary uppercase">Email verification</dt>
+                <dd className="mt-0.5"><EmailVerificationBadge verified={viewing.emailVerified} /></dd>
+              </div>
+            </dl>
+            <Button variant="outline" onClick={() => restore(viewing)} className="self-start">
+              Reinstate user
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="font-display text-xl font-medium">{viewing.name}</h2>
+              <StatusBadge status="disabled" className="mt-1" />
+            </div>
+            <dl className="grid grid-cols-2 gap-3 text-[15px]">
+              {[
+                ["Area", viewing.area || "—"],
+                ["Address", viewing.address || "—"],
+                ["Hours", viewing.hours || "—"],
+                ["Description", viewing.description || "—"],
+                ["Visits logged", viewing.visits ?? 0],
+                ["Last updated", formatDate(viewing.updatedAt) || "—"],
+              ].map(([term, value]) => (
+                <div key={term} className={term === "Address" || term === "Description" ? "col-span-2" : undefined}>
+                  <dt className="text-xs font-semibold tracking-wide text-secondary uppercase">{term}</dt>
+                  <dd className="mt-0.5">{value}</dd>
+                </div>
+              ))}
+              <div>
+                <dt className="text-xs font-semibold tracking-wide text-secondary uppercase">Rating</dt>
+                <dd className="mt-1"><BeanRating value={viewing.rating} size={12} /></dd>
+              </div>
+            </dl>
+            {viewing.photo && (
+              <img src={assetUrl(viewing.photo)} alt="" className="aspect-video w-full rounded-2xl object-cover" />
+            )}
+            <Button variant="outline" onClick={() => restore(viewing)} className="self-start">
+              Enable café
+            </Button>
+          </div>
+        ))}
       </Modal>
     </>
   );

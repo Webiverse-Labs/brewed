@@ -6,7 +6,6 @@ import DataTable from "../../components/admin/DataTable.jsx";
 import SuggestionDetail from "../../components/admin/SuggestionDetail.jsx";
 import Button from "../../components/ui/Button.jsx";
 import Modal from "../../components/ui/Modal.jsx";
-import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
 import api from "../../lib/api.js";
@@ -15,7 +14,7 @@ import { useApi } from "../../hooks/useApi.js";
 import { useMediaQuery } from "../../hooks/useMediaQuery.js";
 import { useConfirmation } from "../../hooks/useConfirmation.js";
 
-const columns = ["Café Name", "Submitted By", "Date", "Status", "Actions"];
+const columns = ["Café Name", "Submitted By", "Date", "Actions"];
 
 function AdminSuggestionsPage() {
   const confirm = useConfirmation();
@@ -83,18 +82,12 @@ function AdminSuggestionsPage() {
               <td className="font-medium whitespace-nowrap">{s.name}</td>
               <td className="text-secondary">{handle(s)}</td>
               <td className="whitespace-nowrap">{formatDate(s.createdAt)}</td>
-              <td>
-                <StatusBadge status={s.status} />
-              </td>
               <td>{reviewAction(s)}</td>
             </>
           )}
           renderCard={(s) => (
             <button type="button" onClick={() => setSelectedId(s.id)} className="w-full text-left">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium">{s.name}</p>
-                <StatusBadge status={s.status} />
-              </div>
+              <p className="font-medium">{s.name}</p>
               <p className="mt-1 text-[13px] text-secondary">
                 {handle(s)} · {formatDate(s.createdAt)}
               </p>

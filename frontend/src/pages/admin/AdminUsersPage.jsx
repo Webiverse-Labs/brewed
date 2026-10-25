@@ -18,7 +18,7 @@ import { useApi } from "../../hooks/useApi.js";
 import { useDebounced } from "../../hooks/useDebounced.js";
 import { useConfirmation } from "../../hooks/useConfirmation.js";
 
-const columns = ["User", "Email", "Visits", "Joined", "Status", "Actions"];
+const columns = ["User", "Email", "Visits", "Joined", "Actions"];
 
 function AdminUsersPage() {
   const confirm = useConfirmation();
@@ -100,18 +100,12 @@ function AdminUsersPage() {
             <td className="text-secondary">{user.email}</td>
             <td>{user.visits}</td>
             <td className="whitespace-nowrap">{formatMonth(user.createdAt)}</td>
-            <td>
-              <StatusBadge status={user.status} />
-            </td>
             <td>{actions(user)}</td>
           </>
         )}
         renderCard={(user) => (
           <>
-            <div className="flex items-start justify-between gap-3">
-              {who(user)}
-              <StatusBadge status={user.status} />
-            </div>
+            {who(user)}
             <p className="mt-2 truncate text-[13px] text-secondary">
               {user.email} · {user.visits} visits · Joined {formatMonth(user.createdAt)}
             </p>

@@ -11,10 +11,12 @@ import Button from "../../components/ui/Button.jsx";
 import DashedUpload from "../../components/ui/DashedUpload.jsx";
 import Field from "../../components/ui/Field.jsx";
 import Modal from "../../components/ui/Modal.jsx";
+import StatusBadge from "../../components/ui/StatusBadge.jsx";
 import TextInput from "../../components/ui/TextInput.jsx";
 import LoadError from "../../components/ui/LoadError.jsx";
 import Loader from "../../components/ui/Loader.jsx";
 import api, { errorMessage } from "../../lib/api.js";
+import { assetUrl } from "../../lib/assetUrl.js";
 import { useApi } from "../../hooks/useApi.js";
 import { useDebounced } from "../../hooks/useDebounced.js";
 import { useConfirmation } from "../../hooks/useConfirmation.js";
@@ -26,6 +28,7 @@ function AdminCafesPage() {
   const [query, setQuery] = useState("");
   const q = encodeURIComponent(useDebounced(query.trim()));
   const { data, loading, error, reload, setData } = useApi(`/admin/cafes?active=true&q=${q}`);
+  const [viewing, setViewing] = useState(null);
   const [editing, setEditing] = useState(null); // null | "new" | café being edited
   const [photos, setPhotos] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -57,6 +60,7 @@ function AdminCafesPage() {
     onConfirm: async () => {
       const { data: res } = await api.patch(`/admin/cafes/${cafe.id}`, { active: false });
       replaceRow(res.cafe);
+      setViewing((current) => current?.id === cafe.id ? null : current);
       setEditing((current) => current?.id === cafe.id ? null : current);
       toast.success(`${cafe.name} disabled and moved to Archive.`);
     },
@@ -91,6 +95,9 @@ function AdminCafesPage() {
 
   const actions = (cafe) => (
     <div className="flex gap-1.5">
+      <Button variant="ghost" size="sm" onClick={() => setViewing(cafe)}>
+        View
+      </Button>
       <Button variant="ghost" size="sm" onClick={() => openEditor(cafe)}>
         <Pencil size={14} /> Edit
       </Button>
@@ -160,6 +167,38 @@ function AdminCafesPage() {
         )}
       />
       )}
+
+      <Modal open={viewing !== null} onClose={() => setViewing(null)} title="Café details" size="sm">
+        {viewing && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="font-display text-xl font-medium">{viewing.name}</h2>
+              <StatusBadge status={viewing.active ? "active" : "disabled"} className="mt-1" />
+            </div>
+            <dl className="grid grid-cols-2 gap-3 text-[15px]">
+              {[
+                ["Area", viewing.area || "—"],
+                ["Address", viewing.address || "—"],
+                ["Hours", viewing.hours || "—"],
+                ["Description", viewing.description || "—"],
+                ["Visits logged", viewing.visits ?? 0],
+              ].map(([term, value]) => (
+                <div key={term} className={term === "Address" || term === "Description" ? "col-span-2" : undefined}>
+                  <dt className="text-xs font-semibold tracking-wide text-secondary uppercase">{term}</dt>
+                  <dd className="mt-0.5">{value}</dd>
+                </div>
+              ))}
+              <div>
+                <dt className="text-xs font-semibold tracking-wide text-secondary uppercase">Rating</dt>
+                <dd className="mt-1"><BeanRating value={viewing.rating} size={12} /></dd>
+              </div>
+            </dl>
+            {viewing.photo && (
+              <img src={assetUrl(viewing.photo)} alt="" className="aspect-video w-full rounded-2xl object-cover" />
+            )}
+          </div>
+        )}
+      </Modal>
 
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={isNew ? "Add New Café" : "Edit Café"} size="lg">
         <form onSubmit={save} className="flex flex-col gap-4">
